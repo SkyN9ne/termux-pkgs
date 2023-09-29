@@ -12,6 +12,13 @@ termux_setup_python_pip() {
 			echo "Note that package 'python-pip' is known to be problematic for building on device."
 			exit 1
 		fi
+
+		# Setup a virtual environment and do not mess the system site-packages
+		local _VENV_DIR="${TERMUX_PKG_TMPDIR}/venv-dir"
+
+		mkdir -p "$_VENV_DIR"
+		python${TERMUX_PYTHON_VERSION} -m venv --system-site-packages "$_VENV_DIR"
+		. "$_VENV_DIR/bin/activate"
 		return
 	else
 		local _CROSSENV_VERSION=1.4.0
@@ -51,5 +58,7 @@ termux_setup_python_pip() {
 				"${TERMUX_PYTHON_CROSSENV_PREFIX}"
 		fi
 		. "${TERMUX_PYTHON_CROSSENV_PREFIX}/bin/activate"
+
+		export PATH="${PATH}:${TERMUX_PYTHON_CROSSENV_PREFIX}/build/bin"
 	fi
 }

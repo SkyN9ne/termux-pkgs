@@ -2,11 +2,10 @@ TERMUX_PKG_HOMEPAGE=https://github.com/svenstaro/miniserve
 TERMUX_PKG_DESCRIPTION="Tool to serve files and dirs over HTTP"
 TERMUX_PKG_LICENSE="MIT"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION="0.23.0"
+TERMUX_PKG_VERSION="0.24.0"
 TERMUX_PKG_SRCURL=https://github.com/svenstaro/miniserve/archive/v$TERMUX_PKG_VERSION.tar.gz
-TERMUX_PKG_SHA256=46e076f35cd8919a566d595b7fef05ce9c5c223a66bea6ee6dd3092c42697bd1
+TERMUX_PKG_SHA256=ed0619bfbad3f9ea635aa266a9c4e96247ad94683d50743f0464f48f9e48ae88
 TERMUX_PKG_AUTO_UPDATE=true
-TERMUX_PKG_DEPENDS=libbz2
 TERMUX_PKG_BUILD_IN_SRC=true
 
 termux_step_pre_configure() {
@@ -17,12 +16,17 @@ termux_step_pre_configure() {
 	: "${CARGO_HOME:=$HOME/.cargo}"
 	export CARGO_HOME
 
-	rm -rf $CARGO_HOME/registry/src/github.com-*/rustix-*
+	rm -rf $CARGO_HOME/registry/src/*/socket2-*
 	cargo fetch --target "${CARGO_TARGET_NAME}"
 
-	for d in $CARGO_HOME/registry/src/github.com-*/rustix-*; do
-		patch --silent -p1 -d ${d} < $TERMUX_PKG_BUILDER_DIR/0001-upstream-fix-libc-removing-unsafe-on-makedev.diff || :
-	done
+	if [ $TERMUX_ARCH_BITS = 32 ]; then
+		local p="socket2-0.5.2-src-sys-unix.rs.diff32"
+		local d
+		for d in $CARGO_HOME/registry/src/*/socket2-*; do
+			patch --silent -p1 -d ${d} \
+				< "$TERMUX_PKG_BUILDER_DIR/${p}" || :
+		done
+	fi
 
 	rm -f Makefile
 }

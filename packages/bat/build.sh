@@ -3,6 +3,7 @@ TERMUX_PKG_DESCRIPTION="A cat(1) clone with wings"
 TERMUX_PKG_LICENSE="Apache-2.0"
 TERMUX_PKG_MAINTAINER="@termux"
 TERMUX_PKG_VERSION="0.23.0"
+TERMUX_PKG_REVISION=1
 TERMUX_PKG_SRCURL=https://github.com/sharkdp/bat/archive/v$TERMUX_PKG_VERSION.tar.gz
 TERMUX_PKG_SHA256=30b6256bea0143caebd08256e0a605280afbbc5eef7ce692f84621eb232a9b31
 TERMUX_PKG_AUTO_UPDATE=true
@@ -25,7 +26,7 @@ termux_step_pre_configure() {
 	cargo fetch --target "${CARGO_TARGET_NAME}"
 
 	local f
-	for f in $CARGO_HOME/registry/src/github.com-*/libgit2-sys-*/build.rs; do
+	for f in $CARGO_HOME/registry/src/*/libgit2-sys-*/build.rs; do
 		sed -i -E 's/\.range_version\(([^)]*)\.\.[^)]*\)/.atleast_version(\1)/g' "${f}"
 	done
 }

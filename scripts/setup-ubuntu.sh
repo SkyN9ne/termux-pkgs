@@ -92,13 +92,11 @@ PACKAGES+=" gegl"
 # Needed by package libidn2.
 PACKAGES+=" gengetopt"
 
-# Needed by package proxmark3-git.
-PACKAGES+=" swig"
-
 # Needed by package dbus-glib.
 PACKAGES+=" libdbus-1-dev"
 
 # Needed by package below.
+PACKAGES+=" clang-15"
 PACKAGES+=" libelf-dev"
 
 # Needed by package ghostscript.
@@ -135,7 +133,9 @@ PACKAGES+=" ruby"
 
 # Needed by host build of package nodejs.
 PACKAGES+=" libc-ares-dev"
+PACKAGES+=" libc-ares-dev:i386"
 PACKAGES+=" libicu-dev"
+PACKAGES+=" libicu-dev:i386"
 
 # Needed by php.
 PACKAGES+=" re2c"
@@ -147,9 +147,9 @@ PACKAGES+=" composer"
 
 # Needed by package rust.
 PACKAGES+=" libssl-dev" # Needed to build Rust
-PACKAGES+=" llvm-13-dev"
-PACKAGES+=" llvm-13-tools"
-PACKAGES+=" clang-13"
+PACKAGES+=" llvm-14-dev"
+PACKAGES+=" llvm-14-tools"
+PACKAGES+=" clang-14"
 
 # Needed for package smalltalk.
 PACKAGES+=" libsigsegv-dev"
@@ -247,6 +247,9 @@ PACKAGES+=" triehash"
 # Needed by aspell dictionaries.
 PACKAGES+=" aspell"
 
+# Needed by package gdb.
+PACKAGES+=" guile-3.0-dev"
+
 # Needed by package kphp.
 PACKAGES+=" python3-jsonschema"
 
@@ -288,6 +291,12 @@ PACKAGES+=" libnss3 libnss3:i386 libnss3-dev"
 PACKAGES+=" libwebp7 libwebp7:i386 libwebp-dev"
 PACKAGES+=" libwebpdemux2 libwebpdemux2:i386"
 PACKAGES+=" libwebpmux3 libwebpmux3:i386"
+
+# Required by CGCT
+PACKAGES+=" libdebuginfod-dev"
+
+# Needed to set up CGCT and also to set up other packages
+PACKAGES+=" patchelf"
 
 # Do not require sudo if already running as root.
 if [ "$(id -u)" = "0" ]; then

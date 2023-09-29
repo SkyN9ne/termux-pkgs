@@ -35,7 +35,11 @@ TERMUX_BASE_DIR="/data/data/${TERMUX_APP_PACKAGE}/files"
 TERMUX_CACHE_DIR="/data/data/${TERMUX_APP_PACKAGE}/cache"
 TERMUX_ANDROID_HOME="${TERMUX_BASE_DIR}/home"
 TERMUX_APPS_DIR="${TERMUX_BASE_DIR}/apps"
-TERMUX_PREFIX="${TERMUX_BASE_DIR}/usr"
+TERMUX_PREFIX_CLASSICAL="${TERMUX_BASE_DIR}/usr"
+TERMUX_PREFIX="${TERMUX_PREFIX_CLASSICAL}"
+
+# Path to CGCT tools
+export CGCT_DIR="/data/data/${TERMUX_APP_PACKAGE}/cgct"
 
 # Package name for the packages hosted on the repo.
 # This must only equal TERMUX_APP_PACKAGE if using custom repo that
@@ -43,23 +47,19 @@ TERMUX_PREFIX="${TERMUX_BASE_DIR}/usr"
 TERMUX_REPO_PACKAGE="com.termux"
 
 # Termux repo urls.
-TERMUX_REPO_URL=(
-	https://packages-cf.termux.dev/apt/termux-main
-	https://packages-cf.termux.dev/apt/termux-root
-	https://packages-cf.termux.dev/apt/termux-x11
-)
+TERMUX_REPO_URL=()
+TERMUX_REPO_DISTRIBUTION=()
+TERMUX_REPO_COMPONENT=()
 
-TERMUX_REPO_DISTRIBUTION=(
-	stable
-	root
-	x11
-)
-
-TERMUX_REPO_COMPONENT=(
-	main
-	stable
-	main
-)
+for url in $(jq -r 'del(.pkg_format) | .[] | .url' ${TERMUX_SCRIPTDIR}/repo.json); do
+	TERMUX_REPO_URL+=("$url")
+done
+for distribution in $(jq -r 'del(.pkg_format) | .[] | .distribution' ${TERMUX_SCRIPTDIR}/repo.json); do
+	TERMUX_REPO_DISTRIBUTION+=("$distribution")
+done
+for component in $(jq -r 'del(.pkg_format) | .[] | .component' ${TERMUX_SCRIPTDIR}/repo.json); do
+	TERMUX_REPO_COMPONENT+=("$component")
+done
 
 # Allow to override setup.
 for f in "${HOME}/.config/termux/termuxrc.sh" "${HOME}/.termux/termuxrc.sh" "${HOME}/.termuxrc"; do

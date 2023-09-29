@@ -1,20 +1,21 @@
 TERMUX_PKG_HOMEPAGE=https://emscripten.org
 TERMUX_PKG_DESCRIPTION="Emscripten: An LLVM-to-WebAssembly Compiler"
 TERMUX_PKG_LICENSE="MIT"
-TERMUX_PKG_MAINTAINER="@truboxl"
-TERMUX_PKG_VERSION="3.1.35"
+TERMUX_PKG_MAINTAINER="@termux"
+TERMUX_PKG_VERSION="3.1.46"
 TERMUX_PKG_SRCURL=git+https://github.com/emscripten-core/emscripten
 TERMUX_PKG_GIT_BRANCH=${TERMUX_PKG_VERSION}
 TERMUX_PKG_PLATFORM_INDEPENDENT=true
-TERMUX_PKG_RECOMMENDS="emscripten-llvm, emscripten-binaryen, python, nodejs-lts | nodejs"
+TERMUX_PKG_DEPENDS="emscripten-binaryen, emscripten-llvm"
+TERMUX_PKG_RECOMMENDS="nodejs-lts | nodejs, python"
 TERMUX_PKG_HOSTBUILD=true
 TERMUX_PKG_NO_STATICSPLIT=true
 TERMUX_PKG_AUTO_UPDATE=true
-TERMUX_PKG_ENABLE_CLANG16_PORTING=false
 
 # remove files according to emsdk/upstream directory after running
 # ./emsdk install latest
 TERMUX_PKG_RM_AFTER_INSTALL="
+opt/emscripten-llvm/bin/amdgpu-arch
 opt/emscripten-llvm/bin/clang-check
 opt/emscripten-llvm/bin/clang-cl
 opt/emscripten-llvm/bin/clang-cpp
@@ -46,6 +47,7 @@ opt/emscripten-llvm/bin/llvm-pdbutil
 opt/emscripten-llvm/bin/llvm-profdata
 opt/emscripten-llvm/bin/llvm-rc
 opt/emscripten-llvm/bin/llvm-strings
+opt/emscripten-llvm/bin/nvptx-arch
 opt/emscripten-llvm/lib/libclang.so*
 opt/emscripten-llvm/share
 opt/emscripten/LICENSE
@@ -53,19 +55,20 @@ opt/emscripten/LICENSE
 
 # https://github.com/emscripten-core/emscripten/issues/11362
 # can switch to stable LLVM to save space once above is fixed
-_LLVM_COMMIT=6865cff8ea8b07d9f2385fd92cecb422404f0f35
-_LLVM_TGZ_SHA256=5afc3d005233d751d986df059f1f7ab5863ff1188d5547862b4af829917a7a2f
+_LLVM_COMMIT=75501f53624de92aafce2f1da698b249a7293dc7
+_LLVM_TGZ_SHA256=3a0597f0056233b9d827fde9e18fc4a05d72748c0dae4ea3a0d41c79ee92b0f8
 
 # https://github.com/emscripten-core/emscripten/issues/12252
 # upstream says better bundle the right binaryen revision for now
-_BINARYEN_COMMIT=47056c9a00e368969a503209b6b9f5c0bc287058
-_BINARYEN_TGZ_SHA256=2b45fa831b939e785a00a194f2803a61b6a7f544364c6d49e59956ad047f131a
+_BINARYEN_COMMIT=16a59938563c93d8459bf36679c83497aeba7cc7
+_BINARYEN_TGZ_SHA256=597537e376107dc007f1d14af6f36372ec035413d1c3e72aa24566ee998ce361
 
 # https://github.com/emscripten-core/emsdk/blob/main/emsdk.py
 # https://chromium.googlesource.com/emscripten-releases/+/refs/heads/main/src/build.py
 # https://github.com/llvm/llvm-project
 _LLVM_BUILD_ARGS="
 -DCMAKE_BUILD_TYPE=MinSizeRel
+-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
 -DCMAKE_CROSSCOMPILING=ON
 -DCMAKE_INSTALL_PREFIX=${TERMUX_PREFIX}/opt/emscripten-llvm
 
@@ -79,16 +82,17 @@ _LLVM_BUILD_ARGS="
 -DLLVM_ENABLE_LTO=Thin
 -DLLVM_ENABLE_PROJECTS=clang;compiler-rt;lld
 -DLLVM_ENABLE_TERMINFO=OFF
+-DLLVM_INCLUDE_BENCHMARKS=OFF
 -DLLVM_INCLUDE_EXAMPLES=OFF
 -DLLVM_INCLUDE_TESTS=OFF
+-DLLVM_INCLUDE_UTILS=OFF
 -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON
 -DLLVM_LINK_LLVM_DYLIB=ON
--DLLVM_TABLEGEN=${TERMUX_PKG_HOSTBUILD_DIR}/bin/llvm-tblgen
+-DLLVM_NATIVE_TOOL_DIR=${TERMUX_PKG_HOSTBUILD_DIR}/bin
 
 -DCLANG_DEFAULT_LINKER=lld
 -DCLANG_ENABLE_ARCMT=OFF
 -DCLANG_ENABLE_STATIC_ANALYZER=OFF
--DCLANG_TABLEGEN=${TERMUX_PKG_HOSTBUILD_DIR}/bin/clang-tblgen
 
 -DCOMPILER_RT_BUILD_CRT=OFF
 -DCOMPILER_RT_BUILD_LIBFUZZER=OFF
@@ -117,12 +121,13 @@ termux_pkg_auto_update() {
 
 	if [[ "${latest_tag}" == "${TERMUX_PKG_VERSION}" ]]; then
 		echo "INFO: No update needed. Already at version '${TERMUX_PKG_VERSION}'."
-		return 0
+		return
 	fi
 
 	# https://github.com/emscripten-core/emscripten/blob/main/docs/packaging.md
 	# https://github.com/archlinux/svntogit-community/tree/packages/emscripten/trunk
 	# below generates commit hash for the deps according to emscripten releases
+	local tmpdir=$(mktemp -d)
 	local releases_tags release_tag deps_revision deps_json llvm_commit binaryen_commit llvm_tgz_sha256 binaryen_tgz_sha256
 	releases_tags=$(curl -s https://raw.githubusercontent.com/emscripten-core/emsdk/main/emscripten-releases-tags.json)
 	release_tag=$(echo "${releases_tags}" | python3 -c "import json,sys;print(json.load(sys.stdin)[\"releases\"][\"${latest_tag}\"])")
@@ -130,14 +135,16 @@ termux_pkg_auto_update() {
 	deps_json=$(echo -e "{\n${deps_revision}EOL" | sed -e "s|,EOL|\n}|")
 	llvm_commit=$(echo "${deps_json}" | python3 -c "import json,sys;print(json.load(sys.stdin)[\"llvm_project_revision\"])")
 	binaryen_commit=$(echo "${deps_json}" | python3 -c "import json,sys;print(json.load(sys.stdin)[\"binaryen_revision\"])")
-	curl -LC - "https://github.com/llvm/llvm-project/archive/${llvm_commit}.tar.gz" -o "${TMPDIR:-/tmp}/${llvm_commit}.tar.gz"
-	curl -LC - "https://github.com/WebAssembly/binaryen/archive/${binaryen_commit}.tar.gz" -o "${TMPDIR:-/tmp}/${binaryen_commit}.tar.gz"
-	llvm_tgz_sha256=$(sha256sum "${TMPDIR:-/tmp}/${llvm_commit}.tar.gz" | sed -e "s| .*$||")
-	binaryen_tgz_sha256=$(sha256sum "${TMPDIR:-/tmp}/${binaryen_commit}.tar.gz" | sed -e "s| .*$||")
+	curl -LC - "https://github.com/llvm/llvm-project/archive/${llvm_commit}.tar.gz" -o "${tmpdir}/${llvm_commit}.tar.gz"
+	curl -LC - "https://github.com/WebAssembly/binaryen/archive/${binaryen_commit}.tar.gz" -o "${tmpdir}/${binaryen_commit}.tar.gz"
+	llvm_tgz_sha256=$(sha256sum "${tmpdir}/${llvm_commit}.tar.gz" | sed -e "s| .*$||")
+	binaryen_tgz_sha256=$(sha256sum "${tmpdir}/${binaryen_commit}.tar.gz" | sed -e "s| .*$||")
 
-	echo "INFO: Generated *.tar.gz checksum for:"
-	echo "_LLVM_COMMIT     ${llvm_commit} = ${llvm_tgz_sha256}"
-	echo "_BINARYEN_COMMIT ${binaryen_commit} = ${binaryen_tgz_sha256}"
+	cat <<- EOL
+	INFO: Generated *.tar.gz checksum for:
+	_LLVM_COMMIT     ${llvm_commit} = ${llvm_tgz_sha256}
+	_BINARYEN_COMMIT ${binaryen_commit} = ${binaryen_tgz_sha256}
+	EOL
 
 	sed -i "${TERMUX_PKG_BUILDER_DIR}/build.sh" \
 		-e "s|^_LLVM_COMMIT=.*|_LLVM_COMMIT=${llvm_commit}|" \
@@ -145,7 +152,7 @@ termux_pkg_auto_update() {
 		-e "s|^_BINARYEN_COMMIT=.*|_BINARYEN_COMMIT=${binaryen_commit}|" \
 		-e "s|^_BINARYEN_TGZ_SHA256=.*|_BINARYEN_TGZ_SHA256=${binaryen_tgz_sha256}|"
 
-	rm -f "${TMPDIR:-/tmp}/${llvm_commit}.tar.gz" "${TMPDIR:-/tmp}/${binaryen_commit}.tar.gz"
+	rm -fr "${tmpdir}"
 
 	termux_pkg_upgrade_version "$latest_tag"
 }
@@ -164,7 +171,7 @@ termux_step_post_get_source() {
 
 	local llvm_patches=$(find "${TERMUX_PKG_BUILDER_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'llvm-project-*.patch.diff')
 	if [[ -n "${llvm_patches}" ]]; then
-		cd "${TERMUX_PKG_CACHEDIR}/llvm-project-${_LLVM_COMMIT}"
+		pushd "${TERMUX_PKG_CACHEDIR}/llvm-project-${_LLVM_COMMIT}"
 		for patch in ${llvm_patches}; do
 			patch -p1 -i "${patch}" || :
 		done
@@ -177,11 +184,12 @@ termux_step_post_get_source() {
 			done
 			termux_error_exit "Patch failed! Please check patch errors above!"
 		fi
+		popd
 	fi
 
 	local binaryen_patches=$(find "${TERMUX_PKG_BUILDER_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'binaryen-*.patch.diff')
 	if [[ -n "${binaryen_patches}" ]]; then
-		cd "${TERMUX_PKG_CACHEDIR}/binaryen-${_BINARYEN_COMMIT}"
+		pushd "${TERMUX_PKG_CACHEDIR}/binaryen-${_BINARYEN_COMMIT}"
 		for patch in ${binaryen_patches}; do
 			patch -p1 -i "${patch}" || :
 		done
@@ -194,6 +202,7 @@ termux_step_post_get_source() {
 			done
 			termux_error_exit "Patch failed! Please check patch errors above!"
 		fi
+		popd
 	fi
 }
 
@@ -205,11 +214,39 @@ termux_step_host_build() {
 		-G Ninja \
 		-S "${TERMUX_PKG_CACHEDIR}/llvm-project-${_LLVM_COMMIT}/llvm" \
 		-DCMAKE_BUILD_TYPE=Release \
-		-DLLVM_ENABLE_PROJECTS=clang
-	cmake \
-		--build "${TERMUX_PKG_HOSTBUILD_DIR}" \
+		-DLLVM_ENABLE_PROJECTS=clang \
+		-DLLVM_INCLUDE_BENCHMARKS=OFF \
+		-DLLVM_INCLUDE_EXAMPLES=OFF \
+		-DLLVM_INCLUDE_TESTS=OFF \
+		-DLLVM_INCLUDE_UTILS=OFF
+	ninja \
+		-C "${TERMUX_PKG_HOSTBUILD_DIR}" \
 		-j "${TERMUX_MAKE_PROCESSES}" \
-		--target llvm-tblgen clang-tblgen
+		llvm-tblgen clang-tblgen
+}
+
+termux_step_pre_configure() {
+	# https://github.com/termux/termux-packages/issues/16358
+	# TODO libclang-cpp.so* is not affected
+	if [[ "${TERMUX_ON_DEVICE_BUILD}" == "true" ]]; then
+		echo "WARN: ld.lld wrapper is not working for on-device builds. Skipping."
+		return
+	fi
+
+	local _WRAPPER_BIN=${TERMUX_PKG_BUILDDIR}/_wrapper/bin
+	mkdir -p "${_WRAPPER_BIN}"
+	ln -fs "${TERMUX_STANDALONE_TOOLCHAIN}/bin/lld" "${_WRAPPER_BIN}/ld.lld"
+	cat <<- EOF > "${_WRAPPER_BIN}/ld.lld.sh"
+	#!/bin/bash
+	tmpfile=\$(mktemp)
+	python ${TERMUX_PKG_BUILDER_DIR}/fix-rpath.py -rpath=${TERMUX_PREFIX}/lib \$@ > \${tmpfile}
+	args=\$(cat \${tmpfile})
+	rm -f \${tmpfile}
+	${_WRAPPER_BIN}/ld.lld \${args}
+	EOF
+	chmod +x "${_WRAPPER_BIN}/ld.lld.sh"
+	rm -f "${TERMUX_STANDALONE_TOOLCHAIN}/bin/ld.lld"
+	ln -fs "${_WRAPPER_BIN}/ld.lld.sh" "${TERMUX_STANDALONE_TOOLCHAIN}/bin/ld.lld"
 }
 
 termux_step_make() {
@@ -217,45 +254,43 @@ termux_step_make() {
 	termux_setup_ninja
 
 	# from packages/libllvm/build.sh
-	export _LLVM_DEFAULT_TARGET_TRIPLE=${CCTERMUX_HOST_PLATFORM/-/-unknown-}
-	export _LLVM_TARGET_ARCH
-	if [[ "${TERMUX_ARCH}" == "arm" ]]; then
-		_LLVM_TARGET_ARCH=ARM
-	elif [[ "${TERMUX_ARCH}" == "aarch64" ]]; then
-		_LLVM_TARGET_ARCH=AArch64
-	elif [[ "${TERMUX_ARCH}" == "i686" ]] || [[ "${TERMUX_ARCH}" == "x86_64" ]]; then
-		_LLVM_TARGET_ARCH=X86
-	else
-		termux_error_exit "Invalid arch: ${TERMUX_ARCH}"
-	fi
-
-	_LLVM_BUILD_ARGS+=" -DLLVM_TARGET_ARCH=${_LLVM_TARGET_ARCH}"
-	_LLVM_BUILD_ARGS+=" -DLLVM_TARGETS_TO_BUILD=WebAssembly;${_LLVM_TARGET_ARCH}"
-	_LLVM_BUILD_ARGS+=" -DLLVM_HOST_TRIPLE=${_LLVM_DEFAULT_TARGET_TRIPLE}"
+	local _LLVM_TARGET_TRIPLE=${TERMUX_HOST_PLATFORM/-/-unknown-}${TERMUX_PKG_API_LEVEL}
+	local _LLVM_TARGET_ARCH
+	case "${TERMUX_ARCH}" in
+	aarch64) _LLVM_TARGET_ARCH=AArch64 ;;
+	arm) _LLVM_TARGET_ARCH=ARM ;;
+	i686|x86_64) _LLVM_TARGET_ARCH=X86 ;;
+	*) termux_error_exit "Invalid arch: ${TERMUX_ARCH}" ;;
+	esac
+	_LLVM_BUILD_ARGS+="
+	-DLLVM_HOST_TRIPLE=${_LLVM_TARGET_TRIPLE}
+	-DLLVM_TARGET_ARCH=${_LLVM_TARGET_ARCH}
+	-DLLVM_TARGETS_TO_BUILD=WebAssembly;${_LLVM_TARGET_ARCH}
+	"
 
 	cmake \
 		-G Ninja \
 		-S "${TERMUX_PKG_CACHEDIR}/llvm-project-${_LLVM_COMMIT}/llvm" \
 		-B "${TERMUX_PKG_BUILDDIR}/build-llvm" \
 		${_LLVM_BUILD_ARGS}
-	cmake \
-		--build "${TERMUX_PKG_BUILDDIR}/build-llvm" \
+	ninja \
+		-C "${TERMUX_PKG_BUILDDIR}/build-llvm" \
 		-j "${TERMUX_MAKE_PROCESSES}" \
-		--target install
+		install
 
 	cmake \
 		-G Ninja \
 		-S "${TERMUX_PKG_CACHEDIR}/binaryen-${_BINARYEN_COMMIT}" \
 		-B "${TERMUX_PKG_BUILDDIR}/build-binaryen" \
 		${_BINARYEN_BUILD_ARGS}
-	cmake \
-		--build "${TERMUX_PKG_BUILDDIR}/build-binaryen" \
+	ninja \
+		-C "${TERMUX_PKG_BUILDDIR}/build-binaryen" \
 		-j "${TERMUX_MAKE_PROCESSES}" \
-		--target install
+		install
 }
 
 termux_step_make_install() {
-	cd "${TERMUX_PKG_SRCDIR}"
+	pushd "${TERMUX_PKG_SRCDIR}"
 
 	# https://github.com/emscripten-core/emscripten/pull/15840
 	sed -e "s|-git||" -i "${TERMUX_PKG_SRCDIR}/emscripten-version.txt"
@@ -286,7 +321,7 @@ termux_step_make_install() {
 	install -Dm644 "${TERMUX_PKG_TMPDIR}/emscripten.sh" "${TERMUX_PREFIX}/etc/profile.d/emscripten.sh"
 
 	# add useful tools not installed by LLVM_INSTALL_TOOLCHAIN_ONLY=ON
-	for tool in llc llvm-{addr2line,dwarfdump,dwp,link,mc,nm,objdump,ranlib,readobj,size} opt; do
+	for tool in llvm-{addr2line,dwarfdump,dwp,link,nm,objdump,ranlib,readobj,size,strings}; do
 		install -Dm755 "${TERMUX_PKG_BUILDDIR}/build-llvm/bin/${tool}" "${TERMUX_PREFIX}/opt/emscripten-llvm/bin/${tool}"
 	done
 
@@ -298,6 +333,18 @@ termux_step_make_install() {
 	ln -fs "clang"   "${TERMUX_PREFIX}/opt/emscripten-llvm/bin/wasm32-wasi-clang"
 	ln -fs "clang++" "${TERMUX_PREFIX}/opt/emscripten-llvm/bin/wasm32-wasi-clang++"
 	ln -fs "lld"     "${TERMUX_PREFIX}/opt/emscripten-llvm/bin/wasm-ld"
+
+	# termux_step_massage strip does not cover opt dir
+	find "${TERMUX_PREFIX}/opt" \( \
+		-path "*/emscripten-llvm/bin/*" -o \
+		-path "*/emscripten-llvm/lib/*" -o \
+		-path "*/emscripten-binaryen/bin/*" -o \
+		-path "*/emscripten-binaryen/lib/*" \
+	\) -type f -print0 | \
+		xargs -0 -r file | grep -E "ELF .+ (executable|shared object)" | \
+		cut -d":" -f1 | xargs -r "${STRIP}" --strip-unneeded --preserve-dates
+
+	popd
 }
 
 termux_step_create_debscripts() {
@@ -323,16 +370,16 @@ termux_step_create_debscripts() {
 	' >&2
 	fi
 	echo '
-	====================
-	Post-install notice:
-	If this is the first time installing Emscripten,
-	please start a new session to take effect.
-	If you are upgrading, you may want to clear the
-	cache by running the command below to fix issues.
+	===== Post-install notice =====
+
+	Please start a new session to use Emscripten.
+	You may want to clear the cache by running
+	the command below to fix issues.
 
 	emcc --clear-cache
 
-	===================='
+	===== Post-install notice =====
+	'
 	EOF
 
 	cat <<- EOF > postrm
@@ -343,18 +390,3 @@ termux_step_create_debscripts() {
 	esac
 	EOF
 }
-
-# Emscripten Test Suite (Optional)
-# Some preparations need to be made in Emscripten directory before running
-# test suite on Android / Termux. Refer docs below:
-# https://emscripten.org/docs/getting_started/test-suite.html
-# https://github.com/emscripten-core/emscripten/pull/13493
-# https://github.com/emscripten-core/emscripten/issues/9098
-#
-# Steps:
-# - pkg install cmake emscripten-tests-third-party ndk-sysroot openjdk-17
-# - cd ${PREFIX}/opt/emscripten
-# - MATHLIB="m" pip install -r requirements-dev.txt
-# - npm install --omit=optional
-# - export EMTEST_SKIP_V8=1
-# - test/runner {test_name}

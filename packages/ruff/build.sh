@@ -3,9 +3,9 @@ TERMUX_PKG_DESCRIPTION="An extremely fast Python linter, written in Rust"
 TERMUX_PKG_LICENSE="MIT"
 TERMUX_PKG_LICENSE_FILE="../../LICENSE"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION="0.0.261"
+TERMUX_PKG_VERSION="0.0.291"
 TERMUX_PKG_SRCURL="https://github.com/charliermarsh/ruff/archive/refs/tags/v$TERMUX_PKG_VERSION.tar.gz"
-TERMUX_PKG_SHA256=77ee27c36e047b16f764cf6666a359f19b8428702a06cb424b0f1595f5e35b9c
+TERMUX_PKG_SHA256=b7358133498febbfdc0d119de4dd9c7659b866c7ab8b65e1dcef387e1e2766dc
 TERMUX_PKG_AUTO_UPDATE=true
 TERMUX_PKG_BUILD_IN_SRC=true
 
@@ -33,7 +33,7 @@ termux_step_pre_configure() {
 
 	local _patch=$TERMUX_PKG_BUILDER_DIR/tikv-jemalloc-sys-0.5.3+5.3.0-patched-src-lib.rs.diff
 	local d
-	for d in $CARGO_HOME/registry/src/github.com-*/tikv-jemalloc-sys-*; do
+	for d in $CARGO_HOME/registry/src/*/tikv-jemalloc-sys-*; do
 		patch --silent -p1 -d ${d} < ${_patch} || :
 	done
 }

@@ -3,10 +3,10 @@ TERMUX_PKG_DESCRIPTION="A server and user space API to deal with multimedia pipe
 TERMUX_PKG_LICENSE="MIT, LGPL-2.1, LGPL-3.0, GPL-2.0"
 TERMUX_PKG_LICENSE_FILE="COPYING, LICENSE"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION=0.3.67
+TERMUX_PKG_VERSION=0.3.72
 TERMUX_PKG_SRCURL="https://gitlab.freedesktop.org/pipewire/pipewire/-/archive/${TERMUX_PKG_VERSION}/pipewire-${TERMUX_PKG_VERSION}.tar.bz2"
-TERMUX_PKG_SHA256=43dfad8ee64c90613fdc67db0d7706e4ae747ee5e4aed03c34d3869f3926e081
-TERMUX_PKG_DEPENDS="avahi, ffmpeg, glib, libc++, liblua54, libsndfile, libwebrtc-audio-processing, lilv, ncurses, openssl, pulseaudio, readline"
+TERMUX_PKG_SHA256=bef4ab15f3babd2c77865c9aaceb73b501d48bd5228edb5181fe63d0c756752b
+TERMUX_PKG_DEPENDS="ffmpeg, glib, libc++, liblua54, libopus, libsndfile, libwebrtc-audio-processing, lilv, ncurses, openssl, pulseaudio, readline"
 
 # 'media-session' session-managers is disabled as it requires alsa.
 # Since we are building without x11, dbus is disabled.

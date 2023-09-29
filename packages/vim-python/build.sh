@@ -6,9 +6,9 @@ TERMUX_PKG_DEPENDS="libiconv, ncurses, vim-runtime, python"
 TERMUX_PKG_RECOMMENDS="diffutils"
 # vim should only be updated every 50 releases on multiples of 50.
 # Update all of vim, vim-python and vim-gtk to the same version in one PR.
-TERMUX_PKG_VERSION=9.0.1400
+TERMUX_PKG_VERSION=9.0.1900
 TERMUX_PKG_SRCURL="https://github.com/vim/vim/archive/v${TERMUX_PKG_VERSION}.tar.gz"
-TERMUX_PKG_SHA256=b22586082b5c9c3d31e6830f787b425d114b23d9b6a195bcbd9c2c2a4a30ac49
+TERMUX_PKG_SHA256=c631c375565fb35c2e37bd0aea6aa79c0b25391ce3e9b093321876fa5dd47f66
 TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 vim_cv_getcwd_broken=no
 vim_cv_memmove_handles_overlap=yes
@@ -41,6 +41,8 @@ TERMUX_PKG_CONFFILES="share/vim/vimrc"
 TERMUX_PKG_CONFLICTS="vim"
 TERMUX_PKG_EXTRA_CONFIGURE_ARGS+="
 vi_cv_path_python3_pfx=$TERMUX_PREFIX
+vi_cv_path_python3_include=${TERMUX_PREFIX}/include/python${TERMUX_PYTHON_VERSION}
+vi_cv_path_python3_platinclude=${TERMUX_PREFIX}/include/python${TERMUX_PYTHON_VERSION}
 vi_cv_var_python3_abiflags=
 vi_cv_var_python3_version=${TERMUX_PYTHON_VERSION}
 --enable-python3interp
@@ -49,10 +51,6 @@ vi_cv_var_python3_version=${TERMUX_PYTHON_VERSION}
 TERMUX_PKG_DESCRIPTION+=" - with python support"
 # Remove share/vim/vim90 which is in vim-runtime built as a subpackage of vim:
 TERMUX_PKG_RM_AFTER_INSTALL+=" share/vim/vim90"
-termux_step_pre_configure() {
-	CPPFLAGS+=" -I${TERMUX_PREFIX}/include/python${TERMUX_PYTHON_VERSION}"
-}
-
 termux_step_pre_configure() {
 	# Certain packages are not safe to build on device because their
 	# build.sh script deletes specific files in $TERMUX_PREFIX.
