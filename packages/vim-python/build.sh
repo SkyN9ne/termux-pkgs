@@ -6,9 +6,10 @@ TERMUX_PKG_DEPENDS="libiconv, ncurses, vim-runtime, python"
 TERMUX_PKG_RECOMMENDS="diffutils"
 # vim should only be updated every 50 releases on multiples of 50.
 # Update all of vim, vim-python and vim-gtk to the same version in one PR.
-TERMUX_PKG_VERSION=9.0.1900
+TERMUX_PKG_VERSION=9.1.0200
 TERMUX_PKG_SRCURL="https://github.com/vim/vim/archive/v${TERMUX_PKG_VERSION}.tar.gz"
-TERMUX_PKG_SHA256=c631c375565fb35c2e37bd0aea6aa79c0b25391ce3e9b093321876fa5dd47f66
+TERMUX_PKG_SHA256=cc991d7f6d147a8552ce80ca45e8a2335228096fe1578461149e67dbc97ed35e
+TERMUX_PKG_AUTO_UPDATE=false
 TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 vim_cv_getcwd_broken=no
 vim_cv_memmove_handles_overlap=yes
@@ -31,9 +32,9 @@ bin/rvim
 bin/ex
 share/man/man1/evim.1
 share/icons
-share/vim/vim90/spell/en.ascii*
-share/vim/vim90/print
-share/vim/vim90/tools
+share/vim/vim91/spell/en.ascii*
+share/vim/vim91/print
+share/vim/vim91/tools
 "
 TERMUX_PKG_CONFFILES="share/vim/vimrc"
 
@@ -49,8 +50,8 @@ vi_cv_var_python3_version=${TERMUX_PYTHON_VERSION}
 --with-python3-config-dir=$TERMUX_PYTHON_HOME/config-${TERMUX_PYTHON_VERSION}/
 "
 TERMUX_PKG_DESCRIPTION+=" - with python support"
-# Remove share/vim/vim90 which is in vim-runtime built as a subpackage of vim:
-TERMUX_PKG_RM_AFTER_INSTALL+=" share/vim/vim90"
+# Remove share/vim/vim91 which is in vim-runtime built as a subpackage of vim:
+TERMUX_PKG_RM_AFTER_INSTALL+=" share/vim/vim91"
 termux_step_pre_configure() {
 	# Certain packages are not safe to build on device because their
 	# build.sh script deletes specific files in $TERMUX_PREFIX.
@@ -78,9 +79,9 @@ termux_step_post_make_install() {
 		> $TERMUX_PREFIX/share/vim/vimrc
 
 	# Remove most tutor files:
-	cp $TERMUX_PREFIX/share/vim/vim90/tutor/{tutor,tutor.vim,tutor.utf-8} $TERMUX_PKG_TMPDIR/
-	rm -f $TERMUX_PREFIX/share/vim/vim90/tutor/*
-	cp $TERMUX_PKG_TMPDIR/{tutor,tutor.vim,tutor.utf-8} $TERMUX_PREFIX/share/vim/vim90/tutor/
+	cp $TERMUX_PREFIX/share/vim/vim91/tutor/{tutor,tutor.vim,tutor.utf-8} $TERMUX_PKG_TMPDIR/
+	rm -f $TERMUX_PREFIX/share/vim/vim91/tutor/*
+	cp $TERMUX_PKG_TMPDIR/{tutor,tutor.vim,tutor.utf-8} $TERMUX_PREFIX/share/vim/vim91/tutor/
 }
 
 termux_step_create_debscripts() {

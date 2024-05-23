@@ -2,10 +2,11 @@ TERMUX_PKG_HOMEPAGE=https://www.lighttpd.net
 TERMUX_PKG_DESCRIPTION="Fast webserver with minimal memory footprint"
 TERMUX_PKG_LICENSE="BSD 3-Clause"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION=1.4.71
+TERMUX_PKG_VERSION="1.4.76"
 TERMUX_PKG_SRCURL=https://download.lighttpd.net/lighttpd/releases-1.4.x/lighttpd-${TERMUX_PKG_VERSION}.tar.xz
-TERMUX_PKG_SHA256=b8b6915da20396fdc354df3324d5e440169b2e5ea7859e3a775213841325afac
+TERMUX_PKG_SHA256=8cbf4296e373cfd0cedfe9d978760b5b05c58fdc4048b4e2bcaf0a61ac8f5011
 TERMUX_PKG_DEPENDS="libandroid-glob, libbz2, libcrypt, openssl, pcre2, zlib"
+TERMUX_PKG_AUTO_UPDATE=true
 TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 -Dwith_bzip=enabled
 -Dwith_openssl=true
@@ -20,7 +21,6 @@ etc/lighttpd/modules.conf
 "
 
 termux_step_post_get_source() {
-	mv configure{,.unused}
 	mv CMakeLists.txt{,.unused}
 }
 

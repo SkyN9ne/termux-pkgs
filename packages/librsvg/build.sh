@@ -2,10 +2,10 @@ TERMUX_PKG_HOMEPAGE=https://wiki.gnome.org/action/show/Projects/LibRsvg
 TERMUX_PKG_DESCRIPTION="Library to render SVG files using cairo"
 TERMUX_PKG_LICENSE="LGPL-2.1"
 TERMUX_PKG_MAINTAINER="@termux"
-_MAJOR_VERSION=2.56
-TERMUX_PKG_VERSION=${_MAJOR_VERSION}.3
-TERMUX_PKG_SRCURL=https://ftp.gnome.org/pub/GNOME/sources/librsvg/${_MAJOR_VERSION}/librsvg-${TERMUX_PKG_VERSION}.tar.xz
-TERMUX_PKG_SHA256=5a328048a02d014645cd27f61140f4e0b11280fb2c7f2a21864fe0c59ac1ce88
+TERMUX_PKG_VERSION="2.58.0"
+TERMUX_PKG_SRCURL=https://ftp.gnome.org/pub/GNOME/sources/librsvg/${TERMUX_PKG_VERSION%.*}/librsvg-${TERMUX_PKG_VERSION}.tar.xz
+TERMUX_PKG_SHA256=d7c444a926406b59790be0deae196e18ed26059da573fa1aa9ec9ca7658a559c
+TERMUX_PKG_AUTO_UPDATE=true
 TERMUX_PKG_DEPENDS="fontconfig, freetype, gdk-pixbuf, glib, harfbuzz, libcairo, libpng, libxml2, pango"
 TERMUX_PKG_BUILD_DEPENDS="g-ir-scanner"
 TERMUX_PKG_BREAKS="librsvg-dev"
@@ -19,7 +19,7 @@ ac_cv_path_GDK_PIXBUF_QUERYLOADERS=$TERMUX_PREFIX/bin/gdk-pixbuf-query-loaders
 "
 
 termux_step_pre_configure() {
-	termux_setup_gir
+	TERMUX_PKG_VERSION=. termux_setup_gir
 	termux_setup_rust
 
 	LDFLAGS+=" -fuse-ld=lld"

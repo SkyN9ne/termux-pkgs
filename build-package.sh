@@ -11,7 +11,9 @@ export TMPDIR
 if [[ ! "$TERMUX_BUILD_PACKAGE_CALL_DEPTH" =~ ^[0-9]+$ ]]; then
 	export TERMUX_BUILD_PACKAGE_CALL_DEPTH=0
 	export TERMUX_BUILD_PACKAGE_CALL_BUILT_PACKAGES_LIST_FILE_PATH="${TMPDIR}/build-package-call-built-packages-list-$(date +"%Y-%m-%d-%H.%M.%S.")$((RANDOM%1000))"
+	export TERMUX_BUILD_PACKAGE_CALL_BUILDING_PACKAGES_LIST_FILE_PATH="${TMPDIR}/build-package-call-building-packages-list-$(date +"%Y-%m-%d-%H.%M.%S.")$((RANDOM%1000))"
 	echo -n " " > "$TERMUX_BUILD_PACKAGE_CALL_BUILT_PACKAGES_LIST_FILE_PATH"
+	touch "$TERMUX_BUILD_PACKAGE_CALL_BUILDING_PACKAGES_LIST_FILE_PATH"
 else
 	export TERMUX_BUILD_PACKAGE_CALL_DEPTH=$((TERMUX_BUILD_PACKAGE_CALL_DEPTH+1))
 fi
@@ -28,8 +30,7 @@ source "$TERMUX_SCRIPTDIR/scripts/utils/docker/docker.sh"; docker__create_docker
 # Functions for working with packages
 source "$TERMUX_SCRIPTDIR/scripts/utils/package/package.sh"
 
-SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct 2>/dev/null || date "+%s")
-export SOURCE_DATE_EPOCH
+export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git log -1 --pretty=%ct 2>/dev/null || date "+%s")}
 
 if [ "$(uname -o)" = "Android" ] || [ -e "/system/bin/app_process" ]; then
 	if [ "$(id -u)" = "0" ]; then
@@ -57,7 +58,6 @@ if [ ! -e "$TERMUX_BUILD_LOCK_FILE" ]; then
 	touch "$TERMUX_BUILD_LOCK_FILE"
 fi
 
-export TERMUX_PACKAGES_DIRECTORIES=$(jq --raw-output 'del(.pkg_format) | keys | .[]' ${TERMUX_SCRIPTDIR}/repo.json)
 export TERMUX_REPO_PKG_FORMAT=$(jq --raw-output '.pkg_format // "debian"' ${TERMUX_SCRIPTDIR}/repo.json)
 
 # Special variable for internal use. It forces script to ignore
@@ -83,6 +83,10 @@ source "$TERMUX_SCRIPTDIR/scripts/build/setup/termux_setup_cargo_c.sh"
 # Utility function for setting up Crystal toolchain.
 # shellcheck source=scripts/build/setup/termux_setup_crystal.sh
 source "$TERMUX_SCRIPTDIR/scripts/build/setup/termux_setup_crystal.sh"
+
+# Utility function for setting up Flang toolchain.
+# shellcheck source=scripts/build/setup/termux_setup_flang.sh
+source "$TERMUX_SCRIPTDIR/scripts/build/setup/termux_setup_flang.sh"
 
 # Utility function for setting up GHC toolchain.
 # shellcheck source=scripts/build/setup/termux_setup_ghc.sh
@@ -128,6 +132,10 @@ source "$TERMUX_SCRIPTDIR/scripts/build/setup/termux_setup_rust.sh"
 # Utility function for swift-using packages to setup a swift toolchain
 # shellcheck source=scripts/build/setup/termux_setup_swift.sh
 source "$TERMUX_SCRIPTDIR/scripts/build/setup/termux_setup_swift.sh"
+
+# Utility function to setup a current xmake build system.
+# shellcheck source=scripts/build/setup/termux_setup_xmake.sh
+source "$TERMUX_SCRIPTDIR/scripts/build/setup/termux_setup_xmake.sh"
 
 # Utility function for zig-using packages to setup a zig toolchain.
 # shellcheck source=scripts/build/setup/termux_setup_zig.sh
@@ -228,9 +236,9 @@ source "$TERMUX_SCRIPTDIR/scripts/build/termux_step_handle_hostbuild.sh"
 # shellcheck source=scripts/build/termux_step_host_build.sh
 source "$TERMUX_SCRIPTDIR/scripts/build/termux_step_host_build.sh"
 
-# Setup a standalone Android NDK 25c toolchain. Called from termux_step_setup_toolchain.
-# shellcheck source=scripts/build/toolchain/termux_setup_toolchain_25c.sh
-source "$TERMUX_SCRIPTDIR/scripts/build/toolchain/termux_setup_toolchain_25c.sh"
+# Setup a standalone Android NDK toolchain. Called from termux_step_setup_toolchain.
+# shellcheck source=scripts/build/toolchain/termux_setup_toolchain_26b.sh
+source "$TERMUX_SCRIPTDIR/scripts/build/toolchain/termux_setup_toolchain_26b.sh"
 
 # Setup a standalone Android NDK 23c toolchain. Called from termux_step_setup_toolchain.
 # shellcheck source=scripts/build/toolchain/termux_setup_toolchain_23c.sh
@@ -380,6 +388,13 @@ termux_add_package_to_built_packages_list() {
 	if ! termux_check_package_in_built_packages_list "$1"; then
 		echo -n "$1 " >> $TERMUX_BUILD_PACKAGE_CALL_BUILT_PACKAGES_LIST_FILE_PATH
 	fi
+}
+
+# Check if the package is in the compiling list
+termux_check_package_in_building_packages_list() {
+	[ ! -f "$TERMUX_BUILD_PACKAGE_CALL_BUILDING_PACKAGES_LIST_FILE_PATH" ] && termux_error_exit "ERROR: file '$TERMUX_BUILD_PACKAGE_CALL_BUILDING_PACKAGES_LIST_FILE_PATH' not found."
+	grep -q "^${1}$" "$TERMUX_BUILD_PACKAGE_CALL_BUILDING_PACKAGES_LIST_FILE_PATH"
+	return $?
 }
 
 # Special hook to prevent use of "sudo" inside package build scripts.
@@ -602,6 +617,10 @@ for ((i=0; i<${#PACKAGE_LIST[@]}; i++)); do
 
 		termux_step_start_build
 
+		if ! termux_check_package_in_building_packages_list "${TERMUX_PKG_BUILDER_DIR#${TERMUX_SCRIPTDIR}/}"; then
+			echo "${TERMUX_PKG_BUILDER_DIR#${TERMUX_SCRIPTDIR}/}" >> $TERMUX_BUILD_PACKAGE_CALL_BUILDING_PACKAGES_LIST_FILE_PATH
+		fi
+
 		if [ "$TERMUX_CONTINUE_BUILD" == "false" ]; then
 			termux_step_get_dependencies
 			if [ "$TERMUX_PACKAGE_LIBRARY" = "glibc" ]; then
@@ -661,6 +680,9 @@ for ((i=0; i<${#PACKAGE_LIST[@]}; i++)); do
 			termux_error_exit "Unknown packaging format '$TERMUX_PACKAGE_FORMAT'."
 		fi
 		# Saving a list of compiled packages for further work with it
+		if termux_check_package_in_building_packages_list "${TERMUX_PKG_BUILDER_DIR#${TERMUX_SCRIPTDIR}/}"; then
+			sed -i "\|^${TERMUX_PKG_BUILDER_DIR#${TERMUX_SCRIPTDIR}/}$|d" "$TERMUX_BUILD_PACKAGE_CALL_BUILDING_PACKAGES_LIST_FILE_PATH"
+		fi
 		termux_add_package_to_built_packages_list "$TERMUX_PKG_NAME"
 		termux_step_finish_build
 	) 5< "$TERMUX_BUILD_LOCK_FILE"
@@ -669,4 +691,5 @@ done
 # Removing a file to store a list of compiled packages
 if [ "$TERMUX_BUILD_PACKAGE_CALL_DEPTH" = "0" ]; then
 	rm "$TERMUX_BUILD_PACKAGE_CALL_BUILT_PACKAGES_LIST_FILE_PATH"
+	rm "$TERMUX_BUILD_PACKAGE_CALL_BUILDING_PACKAGES_LIST_FILE_PATH"
 fi

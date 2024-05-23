@@ -17,6 +17,12 @@ termux_step_massage() {
 	# Remove cache file created by glib-compile-schemas:
 	rm -f share/glib-2.0/schemas/gschemas.compiled
 
+	# Remove cache file generated when using glib-cross-bin:
+	rm -rf opt/glib/cross/share/glib-2.0/codegen/__pycache__
+
+ 	# Removing the pacman log that is often included in the package:
+  	rm -f var/log/pacman.log
+
 	# Remove cache file created by gtk-update-icon-cache:
 	rm -f share/icons/hicolor/icon-theme.cache
 
@@ -58,9 +64,25 @@ termux_step_massage() {
 		fi
 	fi
 
+	local pattern=""
+	for file in ${TERMUX_PKG_NO_SHEBANG_FIX_FILES}; do
+		if [[ -z "${pattern}" ]]; then
+			pattern="${file}"
+			continue
+		fi
+		pattern+='|'"${file}"
+	done
+	if [[ -n "${pattern}" ]]; then
+		pattern='(|./)('"${pattern}"')$'
+	fi
+
 	if [ "$TERMUX_PKG_NO_SHEBANG_FIX" != "true" ]; then
 		# Fix shebang paths:
 		while IFS= read -r -d '' file; do
+			if [[ -n "${pattern}" ]] && [[ -n "$(echo "${file}" | grep -E "${pattern}")" ]]; then
+				echo "INFO: Skip shebang fix for ${file}"
+				continue
+			fi
 			if head -c 100 "$file" | head -n 1 | grep -E "^#!.*/bin/.*" | grep -q -E -v -e "^#! ?/system" -e "^#! ?$TERMUX_PREFIX_CLASSICAL"; then
 				sed --follow-symlinks -i -E "1 s@^#\!(.*)/bin/(.*)@#\!$TERMUX_PREFIX/bin/\2@" "$file"
 			fi
@@ -82,7 +104,7 @@ termux_step_massage() {
 		find ./${ADDING_PREFIX}share/man -mindepth 1 -maxdepth 1 -type d ! -name man\* | xargs -r rm -rf
 
 		# Compress man pages with gzip:
-		find ./${ADDING_PREFIX}share/man -type f ! -iname \*.gz -print0 | xargs -r -0 gzip
+		find ./${ADDING_PREFIX}share/man -type f ! -iname \*.gz -print0 | xargs -r -0 gzip -9 -n
 
 		# Update man page symlinks, e.g. unzstd.1 -> zstd.1:
 		while IFS= read -r -d '' file; do
@@ -91,6 +113,12 @@ termux_step_massage() {
 			rm $file
 			ln -s $_link_value.gz $file.gz
 		done < <(find ./${ADDING_PREFIX}share/man -type l ! -iname \*.gz -print0)
+	fi
+
+	# Remove python-glibc package files that are created
+	# due to its launch during package compilation.
+	if [ "$TERMUX_PACKAGE_LIBRARY" = "glibc" ] && [ "$TERMUX_PKG_NAME" != "python-glibc" ]; then
+		rm -f ./${ADDING_PREFIX}lib/python${TERMUX_PYTHON_VERSION}/__pycache__/{base64,platform,quopri}.cpython-${TERMUX_PYTHON_VERSION//./}.pyc
 	fi
 
 	# Check so files were actually installed. Exclude
@@ -148,20 +176,93 @@ termux_step_massage() {
 	# Check so that package is not affected by
 	# https://github.com/android/ndk/issues/1614, or
 	# https://github.com/termux/termux-packages/issues/9944
-	if [ "$TERMUX_PACKAGE_LIBRARY" = "bionic" ] && [ -d "lib" ]; then
-		SYMBOLS="$($READELF -s $($TERMUX_HOST_PLATFORM-clang -print-libgcc-file-name) | grep "FUNC    GLOBAL HIDDEN" | awk '{print $8}')"
+	if [[ "${TERMUX_PACKAGE_LIBRARY}" == "bionic" ]]; then
+		echo "INFO: READELF=${READELF} ... $(command -v ${READELF})"
+		export pattern_file=$(mktemp)
+		echo "INFO: Generating symbols regex to ${pattern_file}"
+		local t0=$(get_epoch)
+		local SYMBOLS=$(${READELF} -s $(${TERMUX_HOST_PLATFORM}-clang -print-libgcc-file-name) | grep -E "FUNC[[:space:]]+GLOBAL[[:space:]]+HIDDEN" | awk '{ print $8 }')
 		SYMBOLS+=" $(echo libandroid_{sem_{open,close,unlink},shm{ctl,get,at,dt}})"
-		SYMBOLS+=" $(echo backtrace{,_symbols{,_fd}})"
-		SYMBOLS+=" posix_spawn posix_spawnp"
-		grep_pattern="$(create_grep_pattern $SYMBOLS)"
-		for lib in $(find lib -name "*.so"); do
-			if ! $READELF -h "$lib" &> /dev/null; then
-				continue
+		# TODO replace grep all symbols with a parser
+		SYMBOLS+=" $(grep "^    [_a-zA-Z0-9]*;" ${TERMUX_SCRIPTDIR}/scripts/lib{c,dl,m}.map.txt | cut -d":" -f2 | sed -e "s/^    //" -e "s/;.*//")"
+		SYMBOLS+=" ${TERMUX_PKG_EXTRA_UNDEF_SYMBOLS_TO_CHECK}"
+		SYMBOLS=$(echo $SYMBOLS | tr " " "\n" | sort | uniq)
+		create_grep_pattern ${SYMBOLS} > "${pattern_file}"
+		local t1=$(get_epoch)
+		echo "INFO: Done ... $((t1-t0))s"
+		echo "INFO: Total symbols $(echo ${SYMBOLS} | wc -w)"
+
+		local nproc=$(nproc)
+		echo "INFO: Identifying files with nproc=${nproc}"
+		local t0=$(get_epoch)
+		local files=$(find . -type f)
+		# use bash to see if llvm-readelf crash
+		# https://github.com/llvm/llvm-project/issues/89534
+		local valid=$(echo "${files}" | xargs -P"${nproc}" -i bash -c 'if ${READELF} -h "{}" &>/dev/null; then echo "{}"; fi')
+		local t1=$(get_epoch)
+		echo "INFO: Done ... $((t1-t0))s"
+		local numberOfFiles=$(echo "${files}" | wc -l)
+		local numberOfValid=$(echo "${valid}" | wc -l)
+		echo "INFO: Found ${numberOfValid} / ${numberOfFiles} files"
+		if [[ "${numberOfValid}" -gt "${numberOfFiles}" ]]; then
+			termux_error_exit "${numberOfValid} > ${numberOfFiles}"
+		fi
+
+		echo "INFO: Running symbol checks on ${numberOfValid} files with nproc=${nproc}"
+		local t0=$(get_epoch)
+		local undef=$(echo "${valid}" | xargs -P"${nproc}" -i sh -c '${READELF} -s "{}" | grep -Ef "${pattern_file}"')
+		local t1=$(get_epoch)
+		echo "INFO: Done ... $((t1-t0))s"
+
+		[[ -n "${undef}" ]] && echo "INFO: Found files with undefined symbols"
+		if [[ "${TERMUX_PKG_UNDEF_SYMBOLS_FILES}" == "all" ]]; then
+			echo "INFO: Skipping output result as TERMUX_PKG_UNDEF_SYMBOLS_FILES=all"
+			undef=""
+		fi
+
+		if [[ -n "${undef}" ]]; then
+			echo "INFO: Showing result"
+			local t0=$(get_epoch)
+			local e=0
+			local c=0
+			local valid_s=$(echo "${valid}" | sort)
+			local f excluded_f
+			while IFS= read -r f; do
+				# exclude object, static files
+				case "${f}" in
+				*.a) (( e &= ~1 )) || : ;;
+				*.o) (( e &= ~1 )) || : ;;
+				*.rlib) (( e &= ~1 )) || : ;;
+				*) (( e |= 1 )) || : ;;
+				esac
+				while IFS= read -r excluded_f; do
+					[[ "${f}" == ${excluded_f} ]] && (( e &= ~1 )) && break
+				done < <(echo "${TERMUX_PKG_UNDEF_SYMBOLS_FILES}")
+				[[ "${TERMUX_PKG_UNDEF_SYMBOLS_FILES}" == "error" ]] && (( e |= 1 )) || :
+				[[ $(( e & 1 )) == 0 ]] && echo "SKIP: ${f}" && continue
+				local undef_s=$(${READELF} -s "${f}" | grep -Ef "${pattern_file}")
+				if [[ -n "${undef_s}" ]]; then
+					((c++)) || :
+					if [[ $(( e & 1 )) != 0 ]]; then
+						echo -e "ERROR: ${f} contains undefined symbols:\n${undef_s}" >&2
+						(( e |= 2 )) || :
+					else
+						local undef_su=$(echo "${undef_s}" | awk '{ print $8 }' | sort | uniq)
+						local undef_su_len=$(echo ${undef_su} | wc -w)
+						echo "SKIP: ${f} contains undefined symbols: ${undef_su_len}" >&2
+					fi
+				fi
+			done < <(echo "${valid_s}")
+			local t1=$(get_epoch)
+			echo "INFO: Done ... $((t1-t0))s"
+			echo "INFO: Found ${c} files with undefined symbols after exclusion"
+			if [[ "${c}" -gt "${numberOfValid}" ]]; then
+				termux_error_exit "${c} > ${numberOfValid}"
 			fi
-			if $READELF -s "$lib" | egrep "${grep_pattern}" &> /dev/null; then
-				termux_error_exit "$lib contains undefined symbols:\n$($READELF -s "$lib" | egrep "${grep_pattern}")"
-			fi
-		done
+			[[ $(( e & 2 )) != 0 ]] && termux_error_exit "Refer above"
+		fi
+		rm -f "${pattern_file}"
+		unset pattern_file
 	fi
 
 	if [ "$TERMUX_PACKAGE_FORMAT" = "debian" ]; then
@@ -187,4 +288,10 @@ create_grep_pattern() {
 	for arg in "$@"; do
 		echo -n "|$symbol_type$arg"'$'
 	done
+}
+
+get_epoch() {
+	[[ -e /proc/uptime ]] && cut -d"." -f1 /proc/uptime && return
+	[[ -n "$(command -v date)" ]] && date +%s && return
+	echo 0
 }

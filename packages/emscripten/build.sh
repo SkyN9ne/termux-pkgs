@@ -2,18 +2,21 @@ TERMUX_PKG_HOMEPAGE=https://emscripten.org
 TERMUX_PKG_DESCRIPTION="Emscripten: An LLVM-to-WebAssembly Compiler"
 TERMUX_PKG_LICENSE="MIT"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION="3.1.46"
+TERMUX_PKG_VERSION="3.1.60"
 TERMUX_PKG_SRCURL=git+https://github.com/emscripten-core/emscripten
 TERMUX_PKG_GIT_BRANCH=${TERMUX_PKG_VERSION}
-TERMUX_PKG_PLATFORM_INDEPENDENT=true
-TERMUX_PKG_DEPENDS="emscripten-binaryen, emscripten-llvm"
-TERMUX_PKG_RECOMMENDS="nodejs-lts | nodejs, python"
+TERMUX_PKG_DEPENDS="nodejs-lts | nodejs, python"
+TERMUX_PKG_ANTI_BUILD_DEPENDS="nodejs, nodejs-lts, python"
 TERMUX_PKG_HOSTBUILD=true
 TERMUX_PKG_NO_STATICSPLIT=true
+TERMUX_PKG_PLATFORM_INDEPENDENT=true
 TERMUX_PKG_AUTO_UPDATE=true
 
-# remove files according to emsdk/upstream directory after running
+# remove files according to emsdk/upstream directory
+# git clone https://github.com/emscripten-core/emsdk --depth=1
+# cd emsdk
 # ./emsdk install latest
+# ls ./upstream/bin/*
 TERMUX_PKG_RM_AFTER_INSTALL="
 opt/emscripten-llvm/bin/amdgpu-arch
 opt/emscripten-llvm/bin/clang-check
@@ -23,6 +26,7 @@ opt/emscripten-llvm/bin/clang-extdef-mapping
 opt/emscripten-llvm/bin/clang-format
 opt/emscripten-llvm/bin/clang-func-mapping
 opt/emscripten-llvm/bin/clang-import-test
+opt/emscripten-llvm/bin/clang-installapi
 opt/emscripten-llvm/bin/clang-linker-wrapper
 opt/emscripten-llvm/bin/clang-nvlink-wrapper
 opt/emscripten-llvm/bin/clang-offload-bundler
@@ -41,12 +45,14 @@ opt/emscripten-llvm/bin/ld64.lld
 opt/emscripten-llvm/bin/ld64.lld.darwin*
 opt/emscripten-llvm/bin/lld-link
 opt/emscripten-llvm/bin/llvm-cov
+opt/emscripten-llvm/bin/llvm-dlltool
 opt/emscripten-llvm/bin/llvm-lib
+opt/emscripten-llvm/bin/llvm-link
+opt/emscripten-llvm/bin/llvm-mca
 opt/emscripten-llvm/bin/llvm-ml
 opt/emscripten-llvm/bin/llvm-pdbutil
 opt/emscripten-llvm/bin/llvm-profdata
 opt/emscripten-llvm/bin/llvm-rc
-opt/emscripten-llvm/bin/llvm-strings
 opt/emscripten-llvm/bin/nvptx-arch
 opt/emscripten-llvm/lib/libclang.so*
 opt/emscripten-llvm/share
@@ -55,13 +61,13 @@ opt/emscripten/LICENSE
 
 # https://github.com/emscripten-core/emscripten/issues/11362
 # can switch to stable LLVM to save space once above is fixed
-_LLVM_COMMIT=75501f53624de92aafce2f1da698b249a7293dc7
-_LLVM_TGZ_SHA256=3a0597f0056233b9d827fde9e18fc4a05d72748c0dae4ea3a0d41c79ee92b0f8
+_LLVM_COMMIT=1ef081b05c562936fc025dde39b444066d9d470f
+_LLVM_TGZ_SHA256=464165e207f8ae83011561c95d7893b190f44cc8df4c98a76527f78eec27b4e4
 
 # https://github.com/emscripten-core/emscripten/issues/12252
 # upstream says better bundle the right binaryen revision for now
-_BINARYEN_COMMIT=16a59938563c93d8459bf36679c83497aeba7cc7
-_BINARYEN_TGZ_SHA256=597537e376107dc007f1d14af6f36372ec035413d1c3e72aa24566ee998ce361
+_BINARYEN_COMMIT=921644ca65afbafb84fb82d58dacc4a028e2d720
+_BINARYEN_TGZ_SHA256=f2e3525bf9da826f89816a1186a0056be94d5f7b7df7f60327391e3ccc89ac40
 
 # https://github.com/emscripten-core/emsdk/blob/main/emsdk.py
 # https://chromium.googlesource.com/emscripten-releases/+/refs/heads/main/src/build.py
@@ -146,11 +152,12 @@ termux_pkg_auto_update() {
 	_BINARYEN_COMMIT ${binaryen_commit} = ${binaryen_tgz_sha256}
 	EOL
 
-	sed -i "${TERMUX_PKG_BUILDER_DIR}/build.sh" \
+	sed \
 		-e "s|^_LLVM_COMMIT=.*|_LLVM_COMMIT=${llvm_commit}|" \
 		-e "s|^_LLVM_TGZ_SHA256=.*|_LLVM_TGZ_SHA256=${llvm_tgz_sha256}|" \
 		-e "s|^_BINARYEN_COMMIT=.*|_BINARYEN_COMMIT=${binaryen_commit}|" \
-		-e "s|^_BINARYEN_TGZ_SHA256=.*|_BINARYEN_TGZ_SHA256=${binaryen_tgz_sha256}|"
+		-e "s|^_BINARYEN_TGZ_SHA256=.*|_BINARYEN_TGZ_SHA256=${binaryen_tgz_sha256}|" \
+		-i "${TERMUX_PKG_BUILDER_DIR}/build.sh"
 
 	rm -fr "${tmpdir}"
 
@@ -169,7 +176,7 @@ termux_step_post_get_source() {
 	tar -xf "${TERMUX_PKG_CACHEDIR}/llvm.tar.gz" -C "${TERMUX_PKG_CACHEDIR}"
 	tar -xf "${TERMUX_PKG_CACHEDIR}/binaryen.tar.gz" -C "${TERMUX_PKG_CACHEDIR}"
 
-	local llvm_patches=$(find "${TERMUX_PKG_BUILDER_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'llvm-project-*.patch.diff')
+	local llvm_patches=$(find "${TERMUX_PKG_BUILDER_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'llvm-project-*.diff')
 	if [[ -n "${llvm_patches}" ]]; then
 		pushd "${TERMUX_PKG_CACHEDIR}/llvm-project-${_LLVM_COMMIT}"
 		for patch in ${llvm_patches}; do
@@ -187,7 +194,7 @@ termux_step_post_get_source() {
 		popd
 	fi
 
-	local binaryen_patches=$(find "${TERMUX_PKG_BUILDER_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'binaryen-*.patch.diff')
+	local binaryen_patches=$(find "${TERMUX_PKG_BUILDER_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'binaryen-*.diff')
 	if [[ -n "${binaryen_patches}" ]]; then
 		pushd "${TERMUX_PKG_CACHEDIR}/binaryen-${_BINARYEN_COMMIT}"
 		for patch in ${binaryen_patches}; do
@@ -226,6 +233,9 @@ termux_step_host_build() {
 }
 
 termux_step_pre_configure() {
+	# this is a workaround for build-all.sh issue
+	TERMUX_PKG_DEPENDS+=", emscripten-binaryen, emscripten-llvm"
+
 	# https://github.com/termux/termux-packages/issues/16358
 	# TODO libclang-cpp.so* is not affected
 	if [[ "${TERMUX_ON_DEVICE_BUILD}" == "true" ]]; then
@@ -305,11 +315,12 @@ termux_step_make_install() {
 	# first run generates .emscripten and exits immediately
 	rm -f "${TERMUX_PKG_SRCDIR}/.emscripten"
 	./emcc --generate-config
-	sed -i .emscripten \
+	sed \
 		-e "s|^EMSCRIPTEN_ROOT.*|EMSCRIPTEN_ROOT = '${TERMUX_PREFIX}/opt/emscripten' # directory|" \
 		-e "s|^LLVM_ROOT.*|LLVM_ROOT = '${TERMUX_PREFIX}/opt/emscripten-llvm/bin' # directory|" \
 		-e "s|^BINARYEN_ROOT.*|BINARYEN_ROOT = '${TERMUX_PREFIX}/opt/emscripten-binaryen' # directory|" \
-		-e "s|^NODE_JS.*|NODE_JS = '${TERMUX_PREFIX}/bin/node' # executable|"
+		-e "s|^NODE_JS.*|NODE_JS = '${TERMUX_PREFIX}/bin/node' # executable|" \
+		-i .emscripten
 	grep "${TERMUX_PREFIX}" "${TERMUX_PKG_SRCDIR}/.emscripten"
 	install -Dm644 "${TERMUX_PKG_SRCDIR}/.emscripten" "${TERMUX_PREFIX}/opt/emscripten/.emscripten"
 

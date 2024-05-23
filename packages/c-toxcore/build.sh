@@ -2,12 +2,12 @@ TERMUX_PKG_HOMEPAGE=https://tox.chat
 TERMUX_PKG_DESCRIPTION="Backend library for the Tox protocol"
 TERMUX_PKG_LICENSE="GPL-3.0"
 TERMUX_PKG_MAINTAINER="@termux"
-_COMMIT=172f279dc0647a538b30e62c96bab8bb1b0c8960
-_COMMIT_DATE=20230303
+# Match commit SHA with toxic/blob/master/script/build-minimal-static-toxic.sh
+_COMMIT=0ec4978de51a113223c56d44dfe0a23c184e4c6d
+_COMMIT_DATE=20240317
 TERMUX_PKG_VERSION=0.2.18-p${_COMMIT_DATE}
-TERMUX_PKG_REVISION=1
-TERMUX_PKG_SRCURL=git+https://github.com/TokTok/toxcore
-TERMUX_PKG_SHA256=c17006e246bc6fc133e2d0ebe0f9e37ca5e825b6640d5c64fb78f1b1fad51986
+TERMUX_PKG_SRCURL=git+https://github.com/TokTok/c-toxcore
+TERMUX_PKG_SHA256=2fecc325ac11433aedfd07df4a928308ea22c55edfd257eb337a056c0b005dc1
 TERMUX_PKG_GIT_BRANCH=master
 TERMUX_PKG_AUTO_UPDATE=false
 TERMUX_PKG_DEPENDS="libsodium, libopus, libvpx"

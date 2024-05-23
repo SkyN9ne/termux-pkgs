@@ -59,7 +59,7 @@ termux_create_debian_subpackages() {
 				mkdir -p "$SUB_PKG_MASSAGE_DIR/$_INCLUDE_DIRSET"
 				mv "$includeset" "$SUB_PKG_MASSAGE_DIR/$_INCLUDE_DIRSET"
 			else
-				echo "WARNING: tried to add $includeset to subpackage, but could not find it"
+				echo "WARNING: tried to add $includeset to subpackage '$SUB_PKG_NAME', but could not find it"
 			fi
 		done
 		shopt -u globstar extglob
@@ -84,7 +84,10 @@ termux_create_debian_subpackages() {
 		fi
 		local SUB_PKG_INSTALLSIZE
 		SUB_PKG_INSTALLSIZE=$(du -sk . | cut -f 1)
-		tar -cJf "$SUB_PKG_PACKAGE_DIR/data.tar.xz" .
+		tar --sort=name \
+			--mtime="@${SOURCE_DATE_EPOCH}" \
+			--owner=0 --group=0 --numeric-owner \
+			-cJf "$SUB_PKG_PACKAGE_DIR/data.tar.xz" .
 
 		mkdir -p DEBIAN
 		cd DEBIAN
@@ -101,11 +104,11 @@ termux_create_debian_subpackages() {
 		local PKG_DEPS_SPC=" ${TERMUX_PKG_DEPENDS//,/} "
 
 		if [ -z "$TERMUX_SUBPKG_DEPEND_ON_PARENT" ] && [ "${PKG_DEPS_SPC/ $SUB_PKG_NAME /}" = "$PKG_DEPS_SPC" ]; then
-		    TERMUX_SUBPKG_DEPENDS+=", $TERMUX_PKG_NAME (= $TERMUX_PKG_FULLVERSION)"
+			TERMUX_SUBPKG_DEPENDS+=", $TERMUX_PKG_NAME (= $TERMUX_PKG_FULLVERSION)"
 		elif [ "$TERMUX_SUBPKG_DEPEND_ON_PARENT" = unversioned ]; then
-		    TERMUX_SUBPKG_DEPENDS+=", $TERMUX_PKG_NAME"
+			TERMUX_SUBPKG_DEPENDS+=", $TERMUX_PKG_NAME"
 		elif [ "$TERMUX_SUBPKG_DEPEND_ON_PARENT" = deps ]; then
-		    TERMUX_SUBPKG_DEPENDS+=", $TERMUX_PKG_DEPENDS"
+			TERMUX_SUBPKG_DEPENDS+=", $TERMUX_PKG_DEPENDS"
 		fi
 
 		if [ "$TERMUX_GLOBAL_LIBRARY" = "true" ] && [ "$TERMUX_PACKAGE_LIBRARY" = "glibc" ]; then
@@ -134,7 +137,10 @@ termux_create_debian_subpackages() {
 		termux_step_create_subpkg_debscripts
 
 		# Create control.tar.xz
-		tar -cJf "$SUB_PKG_PACKAGE_DIR/control.tar.xz" -H gnu .
+		tar --sort=name \
+			--mtime="@${SOURCE_DATE_EPOCH}" \
+			--owner=0 --group=0 --numeric-owner \
+			-cJf "$SUB_PKG_PACKAGE_DIR/control.tar.xz" -H gnu .
 
 		# Create the actual .deb file:
 		TERMUX_SUBPKG_DEBFILE=$TERMUX_OUTPUT_DIR/${SUB_PKG_NAME}${DEBUG}_${TERMUX_PKG_FULLVERSION}_${SUB_PKG_ARCH}.deb

@@ -4,10 +4,10 @@ TERMUX_PKG_DESCRIPTION="Python 3 programming language intended to enable clear p
 TERMUX_PKG_LICENSE="custom"
 TERMUX_PKG_LICENSE_FILE="LICENSE"
 TERMUX_PKG_MAINTAINER="@termux"
-_MAJOR_VERSION=3.11
-TERMUX_PKG_VERSION=${_MAJOR_VERSION}.5
+TERMUX_PKG_VERSION=3.11.9
 TERMUX_PKG_SRCURL=https://www.python.org/ftp/python/${TERMUX_PKG_VERSION}/Python-${TERMUX_PKG_VERSION}.tar.xz
-TERMUX_PKG_SHA256=85cd12e9cf1d6d5a45f17f7afe1cebe7ee628d3282281c492e86adf636defa3f
+TERMUX_PKG_SHA256=9b1e896523fc510691126c864406d9360a3d1e986acbda59cda57b5abda45b87
+TERMUX_PKG_AUTO_UPDATE=false
 TERMUX_PKG_DEPENDS="gdbm, libandroid-posix-semaphore, libandroid-support, libbz2, libcrypt, libexpat, libffi, liblzma, libsqlite, ncurses, ncurses-ui-libs, openssl, readline, zlib"
 TERMUX_PKG_RECOMMENDS="python-ensurepip-wheels, python-pip"
 TERMUX_PKG_SUGGESTS="python-tkinter"
@@ -18,6 +18,8 @@ TERMUX_PKG_PROVIDES="python3"
 
 # https://github.com/termux/termux-packages/issues/15908
 TERMUX_MAKE_PROCESSES=1
+
+_MAJOR_VERSION="${TERMUX_PKG_VERSION%.*}"
 
 # Set ac_cv_func_wcsftime=no to avoid errors such as "character U+ca0025 is not in range [U+0000; U+10ffff]"
 # when executing e.g. "from time import time, strftime, localtime; print(strftime(str('%Y-%m-%d %H:%M'), localtime()))"
@@ -77,12 +79,12 @@ termux_step_pre_configure() {
 
 termux_step_post_make_install() {
 	(cd $TERMUX_PREFIX/bin
-	 ln -sf idle${_MAJOR_VERSION} idle
-	 ln -sf python${_MAJOR_VERSION} python
-	 ln -sf python${_MAJOR_VERSION}-config python-config
-	 ln -sf pydoc${_MAJOR_VERSION} pydoc)
+	ln -sf idle${_MAJOR_VERSION} idle
+	ln -sf python${_MAJOR_VERSION} python
+	ln -sf python${_MAJOR_VERSION}-config python-config
+	ln -sf pydoc${_MAJOR_VERSION} pydoc)
 	(cd $TERMUX_PREFIX/share/man/man1
-	 ln -sf python${_MAJOR_VERSION}.1 python.1)
+	ln -sf python${_MAJOR_VERSION}.1 python.1)
 }
 
 termux_step_post_massage() {
@@ -101,18 +103,20 @@ termux_step_create_debscripts() {
 
 	if [[ -f "$TERMUX_PREFIX/bin/pip" && \
 	 ! (("$TERMUX_PACKAGE_FORMAT" = "debian" && -f $TERMUX_PREFIX/var/lib/dpkg/info/python-pip.list) || \
-	    ("$TERMUX_PACKAGE_FORMAT" = "pacman" && \$(ls $TERMUX_PREFIX/var/lib/pacman/local/python-pip-*))) ]]; then
+	    ("$TERMUX_PACKAGE_FORMAT" = "pacman" && \$(ls $TERMUX_PREFIX/var/lib/pacman/local/python-pip-* 2>/dev/null))) ]]; then
 		echo "Removing pip..."
 		rm -f $TERMUX_PREFIX/bin/pip $TERMUX_PREFIX/bin/pip3* $TERMUX_PREFIX/bin/easy_install $TERMUX_PREFIX/bin/easy_install-3*
 		rm -Rf $TERMUX_PREFIX/lib/python${_MAJOR_VERSION}/site-packages/pip
 		rm -Rf ${TERMUX_PREFIX}/lib/python${_MAJOR_VERSION}/site-packages/pip-*.dist-info
 	fi
 
-	echo ""
-	echo "== Note: pip is now separate from python =="
-	echo "To install, enter the following command:"
-	echo "   pkg install python-pip"
-	echo ""
+	if [ ! -f "$TERMUX_PREFIX/bin/pip" ]; then
+		echo
+		echo "== Note: pip is now separate from python =="
+		echo "To install, enter the following command:"
+		echo "   pkg install python-pip"
+		echo
+	fi
 
 	exit 0
 	POSTINST_EOF
