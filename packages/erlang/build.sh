@@ -2,9 +2,9 @@ TERMUX_PKG_HOMEPAGE=https://www.erlang.org/
 TERMUX_PKG_DESCRIPTION="General-purpose concurrent functional programming language"
 TERMUX_PKG_LICENSE="Apache-2.0"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION="26.1.1"
+TERMUX_PKG_VERSION="27.0"
 TERMUX_PKG_SRCURL=https://github.com/erlang/otp/archive/OTP-$TERMUX_PKG_VERSION.tar.gz
-TERMUX_PKG_SHA256=a47203930e4b34a0e23bdf0a968127e5ec9d0e6c69ccf2e53be81cd2360eee2d
+TERMUX_PKG_SHA256=5c8ad9143ee81c26aae4699c4bc64f76c5e838efb778f988ad9bb1305f505fed
 TERMUX_PKG_AUTO_UPDATE=true
 TERMUX_PKG_UPDATE_VERSION_REGEXP='\d+(\.\d+)+'
 TERMUX_PKG_DEPENDS="libc++, openssl, ncurses, zlib"
@@ -17,6 +17,7 @@ TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 --with-termcap
 erl_xcomp_sysroot=${TERMUX_PREFIX}
 "
+
 termux_pkg_auto_update() {
 	# Get latest release tag:
 	local tag
@@ -45,4 +46,18 @@ termux_step_host_build() {
 termux_step_pre_configure() {
 	# Add --build flag for erlang cross build
 	TERMUX_PKG_EXTRA_CONFIGURE_ARGS+=" --build=$(./erts/autoconf/config.guess)"
+
+	# https://android.googlesource.com/platform/bionic/+/master/docs/32-bit-abi.md#is-32_bit-on-lp32-y2038
+	if [ $TERMUX_ARCH_BITS = 32 ]; then
+		TERMUX_PKG_EXTRA_CONFIGURE_ARGS+=" --disable-year2038"
+	fi
+
+	# Use a wrapper CC to move `-I@TERMUX_PREFIX@/include` to the last include param
+	mkdir -p $TERMUX_PKG_TMPDIR/_fake_bin
+	sed -e "s|@TERMUX_PREFIX@|${TERMUX_PREFIX}|g" \
+		-e "s|@COMPILER@|$(command -v ${CC})|g" \
+		"$TERMUX_PKG_BUILDER_DIR"/wrapper.py.in \
+		> $TERMUX_PKG_TMPDIR/_fake_bin/"$(basename ${CC})"
+	chmod +x $TERMUX_PKG_TMPDIR/_fake_bin/"$(basename ${CC})"
+	export PATH="$TERMUX_PKG_TMPDIR/_fake_bin:$PATH"
 }

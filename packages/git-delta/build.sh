@@ -1,11 +1,11 @@
-TERMUX_PKG_HOMEPAGE=https://github.com/dandavison/delta
+TERMUX_PKG_HOMEPAGE="https://dandavison.github.io/delta/"
 TERMUX_PKG_DESCRIPTION="A syntax-highlighter for git and diff output"
 TERMUX_PKG_LICENSE="MIT"
-TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION="0.16.5"
+TERMUX_PKG_MAINTAINER="Joshua Kahn @TomJo2000"
+TERMUX_PKG_VERSION="0.17.0"
 TERMUX_PKG_REVISION=1
 TERMUX_PKG_SRCURL=https://github.com/dandavison/delta/archive/${TERMUX_PKG_VERSION}.tar.gz
-TERMUX_PKG_SHA256=00d4740e9da4f543f34a2a0503615f8190d307d1180dfb753b6911aa6940197f
+TERMUX_PKG_SHA256=1abd21587bcc1f2ef0cd342784ce990da9978bc345578e45506419e0952de714
 TERMUX_PKG_AUTO_UPDATE=true
 TERMUX_PKG_DEPENDS="git, libgit2, oniguruma"
 TERMUX_PKG_BUILD_IN_SRC=true
@@ -29,7 +29,7 @@ termux_step_pre_configure() {
 	cargo fetch --target "${CARGO_TARGET_NAME}"
 
 	local f
-	for f in $CARGO_HOME/registry/src/*/libgit2-sys-*/build.rs; do
+	for f in "$CARGO_HOME"/registry/src/*/libgit2-sys-*/build.rs; do
 		sed -i -E 's/\.range_version\(([^)]*)\.\.[^)]*\)/.atleast_version(\1)/g' "${f}"
 	done
 }
@@ -37,6 +37,17 @@ termux_step_pre_configure() {
 termux_step_post_make_install() {
 	install -Dm700 -t "$TERMUX_PREFIX"/bin \
 		"$TERMUX_PKG_SRCDIR/target/$CARGO_TARGET_NAME"/release/delta
-	install -Dm600 "$TERMUX_PKG_SRCDIR"/etc/completion/completion.bash \
-		"$TERMUX_PREFIX"/share/bash-completion/completions/delta
+
+	install -Dm644 /dev/null "$TERMUX_PREFIX"/share/bash-completion/completions/delta
+	install -Dm644 /dev/null "$TERMUX_PREFIX"/share/zsh/site-functions/_delta
+	install -Dm644 /dev/null "$TERMUX_PREFIX"/share/fish/vendor_completions.d/delta.fish
+}
+
+termux_step_create_debscripts() {
+	cat <<-EOF >./postinst
+		#!${TERMUX_PREFIX}/bin/sh
+		delta --generate-completion bash > ${TERMUX_PREFIX}/share/bash-completion/completions/delta
+		delta --generate-completion zsh > ${TERMUX_PREFIX}/share/zsh/site-functions/_delta
+		delta --generate-completion fish > ${TERMUX_PREFIX}/share/fish/vendor_completions.d/delta.fish
+	EOF
 }

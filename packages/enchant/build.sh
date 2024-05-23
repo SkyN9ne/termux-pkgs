@@ -2,16 +2,12 @@ TERMUX_PKG_HOMEPAGE=https://abiword.github.io/enchant/
 TERMUX_PKG_DESCRIPTION="Wraps a number of different spelling libraries and programs with a consistent interface"
 TERMUX_PKG_LICENSE="LGPL-2.1"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION="2.6.1"
-TERMUX_PKG_SRCURL=https://github.com/AbiWord/enchant/archive/v${TERMUX_PKG_VERSION}.tar.gz
-TERMUX_PKG_SHA256=42c1013f6133d794046d6d4a2f884e85167b4cb996e264e2708428e4f7c51f64
+TERMUX_PKG_VERSION="2.7.3"
+TERMUX_PKG_SRCURL=https://github.com/AbiWord/enchant/releases/download/v${TERMUX_PKG_VERSION}/enchant-${TERMUX_PKG_VERSION}.tar.gz
+TERMUX_PKG_SHA256=fe6ad4cbe8c71b9384ffdef962be52d4d2bd5ebfb6351435bb390543d4f78b1e
 TERMUX_PKG_AUTO_UPDATE=true
-TERMUX_PKG_EXTRA_CONFIGURE_ARGS="--enable-relocatable" 
+TERMUX_PKG_EXTRA_CONFIGURE_ARGS="--enable-relocatable"
 TERMUX_PKG_DEPENDS="aspell, glib, hunspell, libc++"
-
-termux_step_post_get_source() {
-	./bootstrap
-}
 
 termux_step_pre_configure() {
 	LDFLAGS+=" $($CC -print-libgcc-file-name)"

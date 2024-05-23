@@ -2,15 +2,17 @@ TERMUX_PKG_HOMEPAGE=https://github.com/KhronosGroup/Vulkan-Tools
 TERMUX_PKG_DESCRIPTION="Vulkan Tools and Utilities"
 TERMUX_PKG_LICENSE="Apache-2.0"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION="1.3.265"
-TERMUX_PKG_SRCURL=https://github.com/KhronosGroup/Vulkan-Tools/archive/v${TERMUX_PKG_VERSION}.tar.gz
-TERMUX_PKG_SHA256=f212a0f7f5b5adc5b64acc060e461a48e0c3cf6a0984a9f5b0621db52d02d133
+TERMUX_PKG_VERSION="1.3.285"
+TERMUX_PKG_SRCURL=https://github.com/KhronosGroup/Vulkan-Tools/archive/refs/tags/v${TERMUX_PKG_VERSION}.tar.gz
+TERMUX_PKG_SHA256=5153253f20296558000e730b0340b5a40fac212c91fb4ffe5bf490a8406d89c3
 TERMUX_PKG_DEPENDS="libc++, libx11, libxcb, libwayland, vulkan-loader"
-TERMUX_PKG_BUILD_DEPENDS="libwayland-protocols, vulkan-headers (=${TERMUX_PKG_VERSION}), vulkan-loader-generic (=${TERMUX_PKG_VERSION})"
+TERMUX_PKG_BUILD_DEPENDS="libwayland-protocols, vulkan-headers (=${TERMUX_PKG_VERSION}), vulkan-volk"
 TERMUX_PKG_ANTI_BUILD_DEPENDS="vulkan-loader"
 TERMUX_PKG_AUTO_UPDATE=true
 TERMUX_PKG_UPDATE_TAG_TYPE="newest-tag"
+TERMUX_PKG_UPDATE_VERSION_REGEXP="\d+.\d+.\d+"
 TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
+-DCMAKE_SYSTEM_NAME=Linux
 -DBUILD_CUBE=ON
 -DBUILD_ICD=OFF
 -DBUILD_WSI_WAYLAND_SUPPORT=ON
@@ -18,5 +20,17 @@ TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 -DBUILD_WSI_XLIB_SUPPORT=ON
 -DPython3_EXECUTABLE=$(command -v python3)
 -DVULKAN_HEADERS_INSTALL_DIR=${TERMUX_PREFIX}
--DWAYLAND_SCANNER_EXECUTABLE=${TERMUX_PREFIX}/opt/libwayland/cross/bin/wayland-scanner
 "
+
+termux_step_pre_configure() {
+	local _WRAPPER_BIN="${TERMUX_PKG_BUILDDIR}/_wrapper/bin"
+	mkdir -p "${_WRAPPER_BIN}"
+	if [[ "${TERMUX_ON_DEVICE_BUILD}" == "false" ]]; then
+		sed "s|^export PKG_CONFIG_LIBDIR=|export PKG_CONFIG_LIBDIR=${TERMUX_PREFIX}/opt/libwayland/cross/lib/x86_64-linux-gnu/pkgconfig:|" \
+			"${TERMUX_STANDALONE_TOOLCHAIN}/bin/pkg-config" \
+			> "${_WRAPPER_BIN}/pkg-config"
+		chmod +x "${_WRAPPER_BIN}/pkg-config"
+		export PKG_CONFIG="${_WRAPPER_BIN}/pkg-config"
+	fi
+	export PATH="${_WRAPPER_BIN}:${PATH}"
+}

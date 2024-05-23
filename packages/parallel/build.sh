@@ -2,9 +2,9 @@ TERMUX_PKG_HOMEPAGE=https://www.gnu.org/software/parallel/
 TERMUX_PKG_DESCRIPTION="GNU Parallel is a shell tool for executing jobs in parallel using one or more machines"
 TERMUX_PKG_LICENSE="GPL-3.0"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION="20230922"
+TERMUX_PKG_VERSION="20240522"
 TERMUX_PKG_SRCURL=https://mirrors.kernel.org/gnu/parallel/parallel-${TERMUX_PKG_VERSION}.tar.bz2
-TERMUX_PKG_SHA256=11447416dd5e5df65013cf7b4542e140938a3bfd5f3f3095c9edb168fcbfe063
+TERMUX_PKG_SHA256=67ed9fad31bf3e25f09d500e7e8ca7df9e3ac380fe4ebd16c6f014448a346928
 TERMUX_PKG_DEPENDS="perl"
 TERMUX_PKG_PLATFORM_INDEPENDENT=true
 TERMUX_PKG_AUTO_UPDATE=true
@@ -19,10 +19,10 @@ termux_pkg_auto_update() {
 		echo "INFO: No update needed. Already at version '${TERMUX_PKG_VERSION}'."
 		return
 	fi
-
 	[[ -z "${api_url_r}" ]] && e=1
 	[[ -z "${r1}" ]] && e=1
 	[[ -z "${latest_version}" ]] && e=1
+
 	if [[ "${e}" != 0 ]]; then
 		cat <<- EOL >&2
 		WARN: Auto update failure!

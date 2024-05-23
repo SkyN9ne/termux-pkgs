@@ -2,11 +2,15 @@ TERMUX_PKG_HOMEPAGE=https://github.com/bettio/AtomVM
 TERMUX_PKG_DESCRIPTION="The minimal Erlang VM implementation"
 TERMUX_PKG_LICENSE="Apache-2.0"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION=1:0.5.0
+TERMUX_PKG_VERSION="1:0.6.1"
 TERMUX_PKG_SRCURL=https://github.com/atomvm/AtomVM/archive/refs/tags/v${TERMUX_PKG_VERSION#*:}.tar.gz
-TERMUX_PKG_SHA256=7119667d2f8d7e80be6ba1cbeafc873fd0e7fd876ab4064c51ac473d6a508bdd
+TERMUX_PKG_SHA256=fdc9ead6de43b7896172f9d1902badb6c7c0a2f84c647a3f40f0846ba3a691bb
+TERMUX_PKG_AUTO_UPDATE=true
 TERMUX_PKG_DEPENDS="zlib"
 TERMUX_PKG_HOSTBUILD=true
+TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
+-DAVM_BUILD_RUNTIME_ONLY=ON
+"
 
 termux_step_host_build() {
 	termux_setup_cmake

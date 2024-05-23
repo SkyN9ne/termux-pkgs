@@ -3,17 +3,17 @@ TERMUX_PKG_DESCRIPTION="Go compiler for microcontrollers, WASM, CLI tools"
 TERMUX_PKG_LICENSE="custom"
 TERMUX_PKG_LICENSE_FILE="LICENSE"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION="0.30.0"
+TERMUX_PKG_VERSION="0.31.2"
+TERMUX_PKG_REVISION=1
 TERMUX_PKG_SRCURL=git+https://github.com/tinygo-org/tinygo
 TERMUX_PKG_GIT_BRANCH="v${TERMUX_PKG_VERSION}"
-TERMUX_PKG_SHA256=4ecb1764af87efcd90fcc66cb3b25d7cf3c038fceb87d032155170a4a3c65614
-TERMUX_PKG_DEPENDS="libc++, tinygo-common"
-TERMUX_PKG_RECOMMENDS="binaryen, golang"
+TERMUX_PKG_SHA256=cb5e95fe40ea983ded57730a4abcb194439a657a84041787733a6227a8fd1700
+TERMUX_PKG_DEPENDS="binaryen, golang, libc++"
+TERMUX_PKG_ANTI_BUILD_DEPENDS="binaryen, golang"
 TERMUX_PKG_NO_STATICSPLIT=true
 TERMUX_PKG_BUILD_IN_SRC=true
 TERMUX_PKG_HOSTBUILD=true
 TERMUX_PKG_AUTO_UPDATE=true
-
 _LLVM_OPTION="
 -DCMAKE_BUILD_TYPE=MinSizeRel
 -DGENERATOR_IS_MULTI_CONFIG=ON
@@ -21,7 +21,6 @@ _LLVM_OPTION="
 -DLLVM_TABLEGEN=${TERMUX_PKG_HOSTBUILD_DIR}/bin/llvm-tblgen
 -DCLANG_TABLEGEN=${TERMUX_PKG_HOSTBUILD_DIR}/bin/clang-tblgen
 "
-
 _LLVM_EXTRA_BUILD_TARGETS="
 lib/libLLVMDWARFLinker.a
 lib/libLLVMDWARFLinkerParallel.a
@@ -139,6 +138,9 @@ termux_step_host_build() {
 }
 
 termux_step_pre_configure() {
+	# this is a workaround for build-all.sh issue
+	TERMUX_PKG_DEPENDS+=", tinygo-common"
+
 	# https://github.com/termux/termux-packages/issues/16358
 	if [[ "${TERMUX_ON_DEVICE_BUILD}" == "true" ]]; then
 		echo "WARN: ld.lld wrapper is not working for on-device builds. Skipping."

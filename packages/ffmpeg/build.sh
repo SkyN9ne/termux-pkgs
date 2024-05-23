@@ -2,11 +2,12 @@ TERMUX_PKG_HOMEPAGE=https://ffmpeg.org
 TERMUX_PKG_DESCRIPTION="Tools and libraries to manipulate a wide range of multimedia formats and protocols"
 TERMUX_PKG_LICENSE="GPL-3.0"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION=6.0
-TERMUX_PKG_REVISION=6
+# Please align version with `ffplay` package.
+TERMUX_PKG_VERSION="6.1.1"
+TERMUX_PKG_REVISION=4
 TERMUX_PKG_SRCURL=https://www.ffmpeg.org/releases/ffmpeg-${TERMUX_PKG_VERSION}.tar.xz
-TERMUX_PKG_SHA256=57be87c22d9b49c112b6d24bc67d42508660e6b718b3db89c44e47e289137082
-TERMUX_PKG_DEPENDS="freetype, game-music-emu, libaom, libandroid-glob, libass, libbluray, libbz2, libdav1d, libgnutls, libiconv, liblzma, libmp3lame, libopencore-amr, libopus, librav1e, libsoxr, libsrt, libssh, libtheora, libvo-amrwbenc, libvorbis, libvpx, libvidstab, libwebp, libx264, libx265, libxml2, libzimg, littlecms, ocl-icd, xvidcore, zlib"
+TERMUX_PKG_SHA256=8684f4b00f94b85461884c3719382f1261f0d9eb3d59640a1f4ac0873616f968
+TERMUX_PKG_DEPENDS="fontconfig, freetype, fribidi, game-music-emu, harfbuzz, libaom, libandroid-glob, libass, libbluray, libbz2, libdav1d, libgnutls, libiconv, liblzma, libmp3lame, libopencore-amr, libopenmpt, libopus, librav1e, libsoxr, libsrt, libssh, libtheora, libv4l, libvo-amrwbenc, libvorbis, libvpx, libvidstab, libwebp, libx264, libx265, libxml2, libzimg, littlecms, ocl-icd, svt-av1, xvidcore, zlib"
 TERMUX_PKG_BUILD_DEPENDS="opencl-headers"
 TERMUX_PKG_CONFLICTS="libav"
 TERMUX_PKG_BREAKS="ffmpeg-dev"
@@ -75,17 +76,23 @@ termux_step_configure() {
 		--enable-libass \
 		--enable-libbluray \
 		--enable-libdav1d \
+		--enable-libfontconfig \
 		--enable-libfreetype \
+		--enable-libfribidi \
 		--enable-libgme \
+		--enable-libharfbuzz \
 		--enable-libmp3lame \
 		--enable-libopencore-amrnb \
 		--enable-libopencore-amrwb \
+		--enable-libopenmpt \
 		--enable-libopus \
 		--enable-librav1e \
 		--enable-libsoxr \
 		--enable-libsrt \
 		--enable-libssh \
+		--enable-libsvtav1 \
 		--enable-libtheora \
+		--enable-libv4l2 \
 		--enable-libvidstab \
 		--enable-libvo-amrwbenc \
 		--enable-libvorbis \

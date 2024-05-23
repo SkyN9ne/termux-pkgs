@@ -9,9 +9,10 @@ termux_step_configure_meson() {
 	fi
 
 	CC=gcc CXX=g++ CFLAGS= CXXFLAGS= CPPFLAGS= LDFLAGS= $TERMUX_MESON \
+		setup \
 		$TERMUX_PKG_SRCDIR \
 		$TERMUX_PKG_BUILDDIR \
-		--cross-file $TERMUX_MESON_CROSSFILE \
+		--$(test "${TERMUX_PKG_MESON_NATIVE}" = "true" && echo "native-file" || echo "cross-file") $TERMUX_MESON_CROSSFILE \
 		--prefix $TERMUX_PREFIX \
 		--libdir lib \
 		--buildtype ${_meson_buildtype} \

@@ -4,23 +4,27 @@ TERMUX_PKG_DESCRIPTION="A free source code editor"
 TERMUX_PKG_LICENSE="custom"
 TERMUX_PKG_LICENSE_FILE="scite/License.txt"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION="5.3.8"
+TERMUX_PKG_VERSION="5.5.0"
 TERMUX_PKG_SRCURL=https://www.scintilla.org/scite${TERMUX_PKG_VERSION//./}.tgz
-TERMUX_PKG_SHA256=8ea6d1cc87c7eba09c9ab38e17893cca0c48872f2a738493ac235f30c6dfa509
-TERMUX_PKG_DEPENDS="atk, gdk-pixbuf, glib, gtk3, libc++, libcairo, pango"
+TERMUX_PKG_SHA256=f7726a57be521f71c81b4fcc6d171fbf4a62e08c1c1840f5a74e014f3607ee11
+TERMUX_PKG_DEPENDS="at-spi2-core, gdk-pixbuf, glib, gtk3, libc++, libcairo, pango"
 TERMUX_PKG_BUILD_IN_SRC=true
+TERMUX_PKG_AUTO_UPDATE=true
 TERMUX_PKG_EXTRA_MAKE_ARGS="
 CLANG=1
 GTK3=1
 NO_LUA=1
 "
 
-TERMUX_PKG_AUTO_UPDATE=true
-
 termux_extract_src_archive() {
 	local file="$TERMUX_PKG_CACHEDIR/$(basename "${TERMUX_PKG_SRCURL}")"
 	mkdir -p "$TERMUX_PKG_SRCDIR"
 	tar xf "$file" -C "$TERMUX_PKG_SRCDIR" --strip-components=0
+}
+
+termux_step_pre_configure() {
+	# https://github.com/termux/termux-packages/issues/18810
+	LDFLAGS+=" -Wl,--undefined-version"
 }
 
 termux_step_make() {

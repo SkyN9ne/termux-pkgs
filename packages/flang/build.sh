@@ -3,12 +3,15 @@ TERMUX_PKG_DESCRIPTION="LLVM's Fortran frontend"
 TERMUX_PKG_LICENSE="Apache-2.0"
 TERMUX_PKG_LICENSE_FILE="flang/LICENSE.TXT"
 TERMUX_PKG_MAINTAINER="@termux"
-LLVM_MAJOR_VERSION=16
-TERMUX_PKG_VERSION=${LLVM_MAJOR_VERSION}.0.5
-TERMUX_PKG_SHA256=37f540124b9cfd4680666e649f557077f9937c9178489cea285a672e714b2863
+LLVM_MAJOR_VERSION=18
+TERMUX_PKG_VERSION=${LLVM_MAJOR_VERSION}.1.6
 TERMUX_PKG_SRCURL=https://github.com/llvm/llvm-project/releases/download/llvmorg-$TERMUX_PKG_VERSION/llvm-project-$TERMUX_PKG_VERSION.src.tar.xz
+TERMUX_PKG_SHA256=bd4b4cb6374bcd5fc5a3ba60cb80425d29da34f316b8821abc12c0db225cf6b4
+TERMUX_PKG_AUTO_UPDATE=false
 TERMUX_PKG_HOSTBUILD=true
-TERMUX_PKG_DEPENDS="libc++, libllvm, clang, lld, mlir"
+# `flang-new` should be rebuilt when libllvm bumps version.
+# See https://github.com/termux/termux-packages/issues/19362
+TERMUX_PKG_DEPENDS="libc++, libllvm (= $TERMUX_PKG_VERSION), clang (= $TERMUX_PKG_VERSION), lld (= $TERMUX_PKG_VERSION), mlir (= $TERMUX_PKG_VERSION)"
 TERMUX_PKG_BUILD_DEPENDS="libllvm-static"
 
 # Upstream doesn't support 32-bit arches well. See https://github.com/llvm/llvm-project/issues/57621.
@@ -50,8 +53,8 @@ termux_step_host_build() {
 	termux_setup_ninja
 
 	cmake -G Ninja "-DCMAKE_BUILD_TYPE=Release" \
-				   "-DLLVM_ENABLE_PROJECTS=clang;mlir" \
-				   $TERMUX_PKG_SRCDIR/llvm
+					"-DLLVM_ENABLE_PROJECTS=clang;mlir" \
+					$TERMUX_PKG_SRCDIR/llvm
 	ninja -j $TERMUX_MAKE_PROCESSES clang-tblgen mlir-tblgen
 }
 
@@ -70,4 +73,21 @@ termux_step_pre_configure() {
 termux_step_post_configure() {
 	TERMUX_PKG_SRCDIR=$TERMUX_SRCDIR_SAVE
 	unset TERMUX_SRCDIR_SAVE
+}
+
+termux_step_post_make_install() {
+	# Copy module source files
+	mkdir -p $TERMUX_PREFIX/opt/flang/{include,module}
+	cp -f $TERMUX_PKG_SRCDIR/flang/module/* $TERMUX_PREFIX/opt/flang/module/
+	ln -sf $TERMUX_PREFIX/include/flang $TERMUX_PREFIX/opt/flang/include/
+}
+
+termux_step_create_debscripts() {
+	sed -e "s|@TERMUX_PREFIX@|$TERMUX_PREFIX|g" \
+		"$TERMUX_PKG_BUILDER_DIR/postinst.sh.in" > ./postinst
+	chmod +x ./postinst
+
+	sed -e "s|@TERMUX_PREFIX@|$TERMUX_PREFIX|g" \
+		"$TERMUX_PKG_BUILDER_DIR/prerm.sh.in" > ./prerm
+	chmod +x ./prerm
 }

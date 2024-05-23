@@ -2,12 +2,12 @@ TERMUX_PKG_HOMEPAGE=https://alist.nn.ci
 TERMUX_PKG_DESCRIPTION="A file list program that supports multiple storage"
 TERMUX_PKG_LICENSE="AGPL-V3"
 TERMUX_PKG_MAINTAINER="2096779623 <admin@utermux.dev>"
-TERMUX_PKG_VERSION=(3.28.0) # alist version
-TERMUX_PKG_VERSION+=(3.28.0) # alist-web version
+TERMUX_PKG_VERSION=(3.34.0) # alist version
+TERMUX_PKG_VERSION+=(3.34.0) # alist-web version
 TERMUX_PKG_SRCURL=(https://github.com/alist-org/alist/archive/v${TERMUX_PKG_VERSION}.tar.gz
-		   https://github.com/alist-org/alist-web/releases/download/${TERMUX_PKG_VERSION[1]}/dist.tar.gz)
-TERMUX_PKG_SHA256=(7944c1ac07c5cad71e84f6087fba1bc28dd552b220f479bc38369455e38d93d4
-		   62f7163f4651762d92da84d4eec51f4246cdb4841c1e7082ad0da1cacb0c2a00)
+                   https://github.com/alist-org/alist-web/releases/download/${TERMUX_PKG_VERSION[1]}/dist.tar.gz)
+TERMUX_PKG_SHA256=(843d6ccc74210d6541d0c976c4b396381ca98a855a9c75b2e753e94c7f78cbad
+                   82a634c20df88b0ce385d029d0a23a8047b825273621d08c276232fb3309442c)
 TERMUX_PKG_BUILD_IN_SRC=true
 # termux_pkg_upgrade_version couldn't check multiple versions now.
 TERMUX_PKG_AUTO_UPDATE=false

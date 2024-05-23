@@ -2,9 +2,10 @@ TERMUX_PKG_HOMEPAGE="https://zellij.dev/"
 TERMUX_PKG_DESCRIPTION="A terminal workspace with batteries included"
 TERMUX_PKG_LICENSE="MIT"
 TERMUX_PKG_MAINTAINER="Jonathan Lei <me@xjonathan.dev>"
-TERMUX_PKG_VERSION="0.38.2"
+TERMUX_PKG_VERSION="0.40.1"
 TERMUX_PKG_SRCURL="https://github.com/zellij-org/zellij/archive/refs/tags/v${TERMUX_PKG_VERSION}.tar.gz"
-TERMUX_PKG_SHA256=18e8ae9fa2ad995af5f6c64b3c0713143d260cdc6c1a978831313bfaf305ad5e
+TERMUX_PKG_SHA256=1f0bfa13f2dbe657d76341a196f98a3b4caa47ac63abee06b39883a11ca220a8
+TERMUX_PKG_BUILD_DEPENDS="zlib"
 TERMUX_PKG_BUILD_IN_SRC=true
 TERMUX_PKG_AUTO_UPDATE=true
 
