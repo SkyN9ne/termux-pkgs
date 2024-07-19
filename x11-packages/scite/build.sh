@@ -1,7 +1,6 @@
 TERMUX_PKG_HOMEPAGE=https://www.scintilla.org/SciTE.html
 TERMUX_PKG_DESCRIPTION="A free source code editor"
-# License: HPND
-TERMUX_PKG_LICENSE="custom"
+TERMUX_PKG_LICENSE="HPND"
 TERMUX_PKG_LICENSE_FILE="scite/License.txt"
 TERMUX_PKG_MAINTAINER="@termux"
 TERMUX_PKG_VERSION="5.5.0"
@@ -30,12 +29,12 @@ termux_step_pre_configure() {
 termux_step_make() {
 	local d
 	for d in lexilla/src scintilla/gtk scite/gtk; do
-		make -j ${TERMUX_MAKE_PROCESSES} -C ${d} \
+		make -j ${TERMUX_PKG_MAKE_PROCESSES} -C ${d} \
 			${TERMUX_PKG_EXTRA_MAKE_ARGS}
 	done
 }
 
 termux_step_make_install() {
-	make -j ${TERMUX_MAKE_PROCESSES} -C scite/gtk install \
+	make -j ${TERMUX_PKG_MAKE_PROCESSES} -C scite/gtk install \
 		${TERMUX_PKG_EXTRA_MAKE_ARGS}
 }

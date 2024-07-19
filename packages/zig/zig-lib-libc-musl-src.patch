@@ -20,17 +20,6 @@
  	struct ktimex64 ktx = {
  		.modes = utx->modes,
  		.offset = utx->offset,
---- a/zig/lib/libc/musl/src/linux/ppoll.c
-+++ b/zig/lib/libc/musl/src/linux/ppoll.c
-@@ -11,7 +11,7 @@
- {
- 	time_t s = to ? to->tv_sec : 0;
- 	long ns = to ? to->tv_nsec : 0;
--#ifdef SYS_ppoll_time64
-+#if defined(SYS_ppoll_time64) && !defined(__ILP32__)
- 	int r = -ENOSYS;
- 	if (SYS_ppoll == SYS_ppoll_time64 || !IS32BIT(s))
- 		r = __syscall_cp(SYS_ppoll_time64, fds, n,
 --- a/zig/lib/libc/musl/src/linux/timerfd.c
 +++ b/zig/lib/libc/musl/src/linux/timerfd.c
 @@ -11,7 +11,7 @@
@@ -95,6 +84,17 @@
  	time_t s = timeout ? timeout->tv_sec : 0;
  	long ns = timeout ? timeout->tv_nsec : 0;
  	int r = __syscall_cp(SYS_recvmmsg_time64, fd, msgvec, vlen, flags,
+--- a/zig/lib/libc/musl/src/select/ppoll.c
++++ b/zig/lib/libc/musl/src/select/ppoll.c
+@@ -11,7 +11,7 @@
+ {
+ 	time_t s = to ? to->tv_sec : 0;
+ 	long ns = to ? to->tv_nsec : 0;
+-#ifdef SYS_ppoll_time64
++#if defined(SYS_ppoll_time64) && !defined(__ILP32__)
+ 	int r = -ENOSYS;
+ 	if (SYS_ppoll == SYS_ppoll_time64 || !IS32BIT(s))
+ 		r = __syscall_cp(SYS_ppoll_time64, fds, n,
 --- a/zig/lib/libc/musl/src/select/pselect.c
 +++ b/zig/lib/libc/musl/src/select/pselect.c
 @@ -12,7 +12,7 @@
@@ -140,7 +140,7 @@
  struct statx {
  	uint32_t stx_mask;
  	uint32_t stx_blksize;
-@@ -139,14 +142,18 @@
+@@ -140,14 +143,18 @@
  {
  	int ret;
  #ifdef SYS_fstatat
